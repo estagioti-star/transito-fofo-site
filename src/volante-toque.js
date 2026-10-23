@@ -29,7 +29,7 @@ export function criarVolanteToque(thumbEl, wheelEl, buzinar) {
         if (st.tap.move < TAP_MOVE) continue;
         st.tap = null;
       }
-      const gr = st.grab, angSlide = (t.clientX - gr.x) / 70 * 90;
+      const gr = st.grab, angSlide = (t.clientX - gr.x) / 110 * 90;   // spec 060: era /70 (sensível demais)
       let ang = angSlide;
       if (gr.a0 !== null) {
         let d = Math.atan2(t.clientX - st.cx, st.cy - t.clientY) * 180 / Math.PI - gr.a0;
@@ -45,9 +45,9 @@ export function criarVolanteToque(thumbEl, wheelEl, buzinar) {
     st.ang += (st.alvo - st.ang) * (1 - Math.exp(-dt * k));
     if (st.id === null && Math.abs(st.ang) < 0.3) st.ang = 0;
     const a = Math.abs(st.ang);
-    st.steer = a < 5 ? 0 : -Math.sign(st.ang) * Math.pow(Math.min(1, a / 90), 1.3);
+    st.steer = a < 5 ? 0 : -Math.sign(st.ang) * Math.pow(Math.min(1, a / 90), 1.7);   // spec 060: mais fino no meio
     const rk = st.ang.toFixed(1);
     if (rk !== rodaK) { rodaK = rk; wheelEl.style.transform = `rotate(${rk}deg)`; }
   }
-  return { toque, passo, estado: st, get steer() { return st.steer; }, soltar() { st.id = null; st.alvo = st.ang = st.steer = 0; } };
+  return { toque, passo, zona, estado: st, get steer() { return st.steer; }, soltar() { st.id = null; st.alvo = st.ang = st.steer = 0; } };
 }

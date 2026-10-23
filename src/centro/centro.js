@@ -16,6 +16,7 @@ import { criarVida } from './vida.js';
 import { dividirEmPedacos } from './pedacos.js';
 import { aplicaClimaCentro } from './clima.js';
 import { criarTeclado, MODOS_TECLAS, LS_TECLAS } from '../teclas.js';
+import { criarOlharLivre, giraEmVolta } from '../olhar.js';
 import { criarFiscal } from '../fiscal.js';
 import * as LEI from '../lei.js';
 import { criarHud } from '../hud.js';
@@ -129,16 +130,30 @@ const volante = criarVolanteToque($('thumb'), $('wheel'), () => buzinar());
 function buzinar() { sons.buzina(); const w = $('wheel'); w.classList.remove('honk'); void w.offsetWidth; w.classList.add('honk'); }
 for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) addEventListener(ev, e => {
   if (estado !== 'dirigindo' || (e.target.closest && e.target.closest('button, .ui, a'))) return;
-  e.preventDefault(); volante.toque(e); pedais.toque(e);
+  e.preventDefault();
+  // spec 060: dedo na parte de cima da tela (longe do volante e dos pedais) = olhar para os lados
+  if (olharLivre.toque(e, (x, y) => y < innerHeight * 0.55 && !volante.zona(x, y))) return;
+  volante.toque(e); pedais.toque(e);
 }, { passive: false });
+const olharLivre = criarOlharLivre();
 for (const ev of ['mousedown', 'mousemove', 'mouseup']) addEventListener(ev, e => {
-  if (estado !== 'dirigindo' || APARELHO === 'pc' || (e.target.closest && e.target.closest('button, .ui, a'))) return;
+  if (estado !== 'dirigindo' || (e.target.closest && e.target.closest('button, .ui, a'))) return;
+  // spec 060: no modo Teclado (ou na parte de cima da tela) arrastar o mouse = olhar para os lados
+  if (olharLivre.ativo || (e.type === 'mousedown' && e.button === 0 && (APARELHO === 'pc' || e.clientY < innerHeight * 0.55))) {
+    if (e.type === 'mousedown') olharLivre.pega('mouse', e.clientX); else if (e.type === 'mousemove') olharLivre.move('mouse', e.clientX); else olharLivre.solta('mouse');
+    return;
+  }
+  if (APARELHO === 'pc') return;
   pedais.mouse(e);
 });
+let kbSteer = 0;
 function entrada() {
   pedais.teclado(teclado.acel(keys, re), teclado.freio(keys, re), STEP);
-  // na ré, o acelerador (↑/S ou o da tela) anda para trás (como no bairro)
-  return { steer: Math.max(-1, Math.min(1, volante.steer + teclado.vira(keys) * 0.9)), alvo: pedais.frac * FIS.VMAX, brake: pedais.freio ? 1 : 0, re };
+  // spec 060: no teclado a direção vira aos poucos (1,9/s; volta 3,8/s) — toque rápido corrige pouco
+  const quer = teclado.vira(keys) * 0.9, taxa = Math.abs(quer) > Math.abs(kbSteer) ? 1.9 : 3.8;
+  kbSteer += Math.max(-taxa * STEP, Math.min(taxa * STEP, quer - kbSteer));
+  // na ré, o acelerador (↑/W ou o da tela) anda para trás (como no bairro)
+  return { steer: Math.max(-1, Math.min(1, volante.steer + kbSteer)), alvo: pedais.frac * FIS.VMAX, brake: pedais.freio ? 1 : 0, re };
 }
 
 // ---- spec 046: pisca (seta) e ré, como no bairro (jogo.js): tocar liga e pisca ~1,5 Hz com tique-taque; tocar de
@@ -190,7 +205,11 @@ function updateCamera(dt) {
   if (estado === 'menu') { const a = performance.now() * 0.00012; _tp.set(c.pos.x + Math.sin(a) * 60, 45, c.pos.z + Math.cos(a) * 60); _tl.set(c.pos.x, 0, c.pos.z); }
   if (cam.snap) { cam.pos.copy(_tp); cam.look.copy(_tl); cam.snap = false; }
   cam.pos.lerp(_tp, 1 - Math.exp(-dt * 6)); cam.look.lerp(_tl, 1 - Math.exp(-dt * 9));
-  camera.position.copy(cam.pos); camera.lookAt(cam.look); camera.updateMatrixWorld();
+  camera.position.copy(cam.pos);
+  olharLivre.passo(dt); if (estado !== 'dirigindo') olharLivre.zera();
+  if (olharLivre.ang) { giraEmVolta(camera.position, c.pos, olharLivre.ang); _tl.copy(cam.look); giraEmVolta(_tl, c.pos, olharLivre.ang); camera.lookAt(_tl); }   // spec 060
+  else camera.lookAt(cam.look);
+  camera.updateMatrixWorld();
 }
 
 // --- laço

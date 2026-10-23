@@ -15,6 +15,7 @@ import { criarPedais } from './pedais.js';
 import { PONTOS_JOGO } from './lei.js';
 import { fotoDoRadar, quandoAgora } from './foto.js';
 import { criarTeclado, MODOS_TECLAS, LS_TECLAS } from './teclas.js';
+import { criarOlharLivre, giraEmVolta } from './olhar.js';
 
 const Q = new URLSearchParams(location.search);
 const CAPTURE = Q.has('capture');      // passo a passo controlado de fora (testes)
@@ -423,7 +424,7 @@ function readThumb(e) {
       thumb.tap = null;
     }
     const gr = thumb.grab;
-    const angSlide = (t.clientX - gr.x) / 70 * 90;
+    const angSlide = (t.clientX - gr.x) / 110 * 90;               // spec 060: era /70 (sensível demais)
     let ang = angSlide;
     if (gr.a0 !== null) {
       let d = Math.atan2(t.clientX - thumb.cx, thumb.cy - t.clientY) * 180 / Math.PI - gr.a0;
@@ -436,14 +437,16 @@ function readThumb(e) {
 // a cada quadro: o volante segue o dedo (rápido) ou volta ao centro (suave) e vira "steer"
 let rodaK = '';
 function passoVolante(dt) {
-  if (thumb.id === null) {     // PC: ← → giram o volante desenhado (90° ≈ steer 0,9, como era antes)
-    thumb.alvo = -teclado.vira(keys) * 84;                     // spec 059: ← → (ou A/D no jeito WASD)
+  if (thumb.id === null) {     // PC: ← → giram o volante desenhado (84° ≈ steer 0,9)
+    // spec 060: aos poucos (160°/s; volta 320°/s) — um toque rápido corrige pouco, segurar vira tudo
+    const quer = -teclado.vira(keys) * 84, taxa = Math.abs(quer) > Math.abs(thumb.alvo) ? 160 : 320;
+    thumb.alvo += Math.max(-taxa * dt, Math.min(taxa * dt, quer - thumb.alvo));
   }
   const k = thumb.id !== null || thumb.alvo ? 22 : 7;
   thumb.ang += (thumb.alvo - thumb.ang) * (1 - Math.exp(-dt * k));
   if (thumb.id === null && Math.abs(thumb.ang) < 0.3) thumb.ang = 0;
   const a = Math.abs(thumb.ang);
-  thumb.steer = a < 5 ? 0 : -Math.sign(thumb.ang) * Math.pow(Math.min(1, a / 90), 1.3);
+  thumb.steer = a < 5 ? 0 : -Math.sign(thumb.ang) * Math.pow(Math.min(1, a / 90), 1.7);   // spec 060: mais fino no meio
   const rk = thumb.ang.toFixed(1);
   if (rk !== rodaK) { rodaK = rk; wheelEl.style.transform = `rotate(${rk}deg)`; }
 }
@@ -453,11 +456,19 @@ function onTouch(e) {
   if (e.target && e.target.closest && e.target.closest('button, .ui')) return;
   e.preventDefault();
   isTouchUI = true;
+  // spec 060: dedo na parte de cima da tela (longe do volante e dos pedais) = olhar para os lados
+  if (estado === 'dirigindo' && olharLivre.toque(e, (x, y) => y < innerHeight * 0.55 && !zonaVolante(x, y))) return;
   if (CONTROLE === 'volante') readThumb(e);       // o volante pega só os toques da esquerda; o resto é do pedal
   pedais.toque(e);
 }
+const olharLivre = criarOlharLivre();
 for (const ev of ['mousedown', 'mousemove', 'mouseup']) addEventListener(ev, e => {
   if (estado === 'menu' || isTouchUI || (e.target.closest && e.target.closest('button, .ui'))) return;
+  // spec 060: no modo Teclado (ou na parte de cima da tela) arrastar o mouse = olhar para os lados
+  if (olharLivre.ativo || (e.type === 'mousedown' && e.button === 0 && estado === 'dirigindo' && (APARELHO === 'pc' || e.clientY < innerHeight * 0.55) && !zonaVolante(e.clientX, e.clientY))) {
+    if (e.type === 'mousedown') olharLivre.pega('mouse', e.clientX); else if (e.type === 'mousemove') olharLivre.move('mouse', e.clientX); else olharLivre.solta('mouse');
+    return;
+  }
   // PC, modo volante: o mouse pega o volante como se fosse um dedo (mesma lógica do toque)
   if (CONTROLE === 'volante' && (thumb.id === 'mouse' || (e.type === 'mousedown' && thumb.id === null && zonaVolante(e.clientX, e.clientY)))) {
     const tipo = { mousedown: 'touchstart', mousemove: 'touchmove', mouseup: 'touchend' }[e.type];
@@ -474,9 +485,9 @@ for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) addEven
 // desliga o outro. Desliga sozinha ~1 s depois de completar a conversão (rumo já alinhado com a rua de saída).
 // ---------------------------------------------------------------------------------------------------------------
 const PISCA_HZ = 1.5, GPS_M = 80, AUTO_SETA_M = 60;
-let seta = null, setaT0 = 0, piscaAceso = false, desliga = null, gpsUltimo = null, gpsVis = false, gpsLado = null;
+let seta = null, setaT0 = 0, setaH0 = 0, piscaAceso = false, desliga = null, gpsUltimo = null, gpsVis = false, gpsLado = null;
 function ligarSeta(lado) {
-  seta = seta === lado ? null : lado; setaT0 = t; desliga = null;
+  seta = seta === lado ? null : lado; setaT0 = t; setaH0 = carro.heading; desliga = null;
   atualizaPisca(true);
 }
 function atualizaPisca(forca = false) {
@@ -494,6 +505,8 @@ function conversaoFeita(ref, tf) {
   if (k) desliga = { lado: k.lado, hSaida: k.hSaida, tJulgou: tf, em: null };
 }
 function autoDesliga() {
+  // spec 060: em QUALQUER curva (dentro ou fora da rota): virou ≥ 60° desde que ligou e endireitou o volante → desliga
+  if (seta && Math.abs(wrap(carro.heading - setaH0)) > 1.05 && Math.abs(carro.steer) < 0.12) { seta = null; desliga = null; atualizaPisca(true); return; }
   if (!desliga) return;
   if (desliga.em === null && (Math.abs(wrap(carro.heading - desliga.hSaida)) < 0.3 || t - desliga.tJulgou > 5)) desliga.em = t + 1;
   if (desliga.em !== null && t >= desliga.em) {
@@ -501,7 +514,7 @@ function autoDesliga() {
     desliga = null;
   }
 }
-document.querySelectorAll('.setaBtn').forEach(b => b.addEventListener('pointerdown', e => {
+document.querySelectorAll('.setaBtn[data-lado]').forEach(b => b.addEventListener('pointerdown', e => {
   e.preventDefault(); e.stopPropagation();
   if (estado === 'dirigindo') ligarSeta(b.dataset.lado);
 }));
@@ -518,7 +531,7 @@ let re = false;
 function trocaMarcha() {
   if (estado !== 'dirigindo') return;
   if (Math.abs(carro.speed) > 0.5) { aviso('✋ Pare o carro para trocar a marcha', 1.8); return; }
-  re = !re; ultimoHud = ''; carro.re = re; reBip = 0;
+  re = !re; ultimoHud = ''; carro.re = re; reBip = 0; $('reBtn').classList.toggle('on', re);
   aviso(re ? (isTouchUI ? '🔙 Ré engatada — o acelerador anda para trás' : '🔙 Ré engatada — ' + teclado.reTexto()) : '🚗 Marcha para frente', 2);
 }
 let reBip = 0;
@@ -552,6 +565,7 @@ function passoRe(dt) {             // bipe da ré andando
   if (re && carro.speed < -0.2) { reBip -= dt; if (reBip <= 0) { reBip = 0.9; sons.re(); } } else reBip = 0;
 }
 $('velBox').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); trocaMarcha(); });
+$('reBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); trocaMarcha(); });   // spec 060: botão R no celular
 function playerInput() {
   if (AUTO) return piloto.input(carro);
   // spec 018 (revisto a pedido do Maki): SEM CINTO O CARRO NÃO ANDA — como a retenção do art. 167
@@ -770,12 +784,10 @@ function updateCamera(dt) {
   camera.position.copy(cam.pos);
   // olhar no PARE: gira a câmera (posição e alvo) em volta do carro; + = esquerda
   olhar.ang = estado === 'dirigindo' ? anguloOlhar() : 0;
-  if (olhar.ang !== 0) {
-    const a = olhar.ang, ca = Math.cos(a), sa = Math.sin(a), gira = (v) => {
-      const dx = v.x - c.pos.x, dz = v.z - c.pos.z;
-      v.x = c.pos.x + dx * ca + dz * sa; v.z = c.pos.z - dx * sa + dz * ca;
-    };
-    gira(camera.position); _tl.copy(cam.look); gira(_tl); camera.lookAt(_tl);
+  olharLivre.passo(dt); if (estado !== 'dirigindo') olharLivre.zera();
+  const ang = olhar.ang + olharLivre.ang;                    // spec 060: + o olhar arrastando (dedo/mouse)
+  if (ang !== 0) {
+    giraEmVolta(camera.position, c.pos, ang); _tl.copy(cam.look); giraEmVolta(_tl, c.pos, ang); camera.lookAt(_tl);
   } else camera.lookAt(cam.look);
 }
 
@@ -849,7 +861,7 @@ function reinicia() {
   trocarRota(rotaDe(M), false); fiscal = novoFiscal(); guia.idx = 0; hud.reset(); pedais.soltarTudo(); thumb.id = null; thumb.alvo = thumb.ang = thumb.steer = 0; carro.batidasMuro = 0;
   carro.travadoAte = 0; pow.esconder(); olhar.ref = null; estAnt = null; perdaVel = 0;
   chegou = false; tChegada = null; cam.snap = true; tLargada = t; acc = 0; portaoV = 0;
-  seta = null; desliga = null; gpsUltimo = null; atualizaPisca(true); re = false; carro.re = false; ultimoHud = '';
+  seta = null; desliga = null; gpsUltimo = null; atualizaPisca(true); re = false; carro.re = false; $('reBtn').classList.remove('on'); ultimoHud = '';
   cinto = AUTO || CINTO_INICIAL; cintoSome = null; cnhBase = progresso.cnh().pontos;
   vivos.reset(); ambAvisou = false; sons.sirene(0); estacionouAgora = false; dicaEstac = false;
   transito.saidaEscola(!!M.saidaEscola);

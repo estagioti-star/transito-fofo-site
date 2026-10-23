@@ -27,9 +27,19 @@ export function criarSinais(dados, rede) {
   const cruzMaisPerto = (x, z, max) => { let b = null, bd = max; for (const c of cruz) { const d = Math.hypot(c.x - x, c.z - z); if (d < bd) { bd = d; b = c; } } return b; };
 
   // um ponto do OSM → linha de parada { x, z (no eixo da rua), heading (de quem chega), rua (índice), meia (meia-largura que vale) }
-  function linhaDe(p, sentido) {
-    const mp = rede.maisPerto(p.x, p.z);
-    if (!mp || mp.d > mp.seg.meia + 2) return null;
+  // perto(x, z, raio): a rua mais perto até `raio` m da beira (spec 060: o radar do OSM fica no POSTE, até ~9 m do eixo —
+  // a grade da rede só enxerga a pista, então procura em todos os segmentos)
+  function maisPertoLonge(x, z, raio) {
+    let m = null;
+    for (const s of rede.segs) {
+      const px = x - s.ax, pz = z - s.az, t = Math.max(0, Math.min(s.L, px * s.ux + pz * s.uz)), d = Math.hypot(px - s.ux * t, pz - s.uz * t);
+      if (d - s.meia <= raio && (!m || d - s.meia < m.d - m.seg.meia)) m = { d, t, seg: s };
+    }
+    return m;
+  }
+  function linhaDe(p, sentido, raio = 0) {
+    const mp = raio ? maisPertoLonge(p.x, p.z, raio) : rede.maisPerto(p.x, p.z);
+    if (!mp || mp.d > mp.seg.meia + Math.max(2, raio)) return null;
     const s = mp.seg, r = dados.ruas[s.ri], h = Math.atan2(s.ux, s.uz);
     const x = s.ax + s.ux * mp.t, z = s.az + s.uz * mp.t;
     let rumo = h;
@@ -91,7 +101,7 @@ export function criarSinais(dados, rede) {
   });
   const radares = [];
   dados.radares.filter(dentro).forEach((p, i) => {
-    const l = linhaDe(p, p.sentido);
+    const l = linhaDe(p, p.sentido, 7);          // spec 060: até 7 m da beira (radar no poste)
     if (l) radares.push({ id: 'rc' + i, rua: l.rua, x: l.x, z: l.z, heading: l.heading, limiteKmh: p.limite || dados.ruas[l.ri].limite });
   });
 
