@@ -14,6 +14,7 @@ import { criarHud } from './hud.js';
 import { criarPedais } from './pedais.js';
 import { PONTOS_JOGO } from './lei.js';
 import { fotoDoRadar, quandoAgora } from './foto.js';
+import { criarTeclado, MODOS_TECLAS, LS_TECLAS } from './teclas.js';
 
 const Q = new URLSearchParams(location.search);
 const CAPTURE = Q.has('capture');      // passo a passo controlado de fora (testes)
@@ -366,14 +367,23 @@ function chipDe(e, sAqui) {
 // Entrada: teclado + volante de 1 polegar (dedo no volante = acelera · puxa pra baixo = freia · solta = vai parando)
 // ---------------------------------------------------------------------------------------------------------------
 const keys = {};
+// spec 059: jeito do teclado (menu): 'setas' (← → viram, A/D piscam) ou 'wasd' (A/D viram, ← → piscam, S parado = ré);
+// ?teclas=… força; no ?capture o padrão é 'setas' (testes)
+let TECLAS = MODOS_TECLAS.includes(Q.get('teclas')) ? Q.get('teclas') : CAPTURE ? 'setas' : (() => { try { return MODOS_TECLAS.includes(localStorage.getItem(LS_TECLAS)) ? localStorage.getItem(LS_TECLAS) : 'setas'; } catch { return 'setas'; } })();
+let teclado = criarTeclado(TECLAS);
 addEventListener('keydown', e => {
   keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); if (e.code === 'KeyH') buzinar();
-  // spec 033: A/D (ou Q/E) = pisca esquerdo/direito; R = ré; C = cinto
-  if (!e.repeat && estado === 'dirigindo') { if (e.code === 'KeyQ' || e.code === 'KeyA') ligarSeta('esq'); if (e.code === 'KeyE' || e.code === 'KeyD') ligarSeta('dir'); if (e.code === 'KeyR') trocaMarcha(); if (e.code === 'KeyC') porCinto(); }
+  // spec 033: pisca esquerdo/direito (A/D ou ← →, conforme o jeito do teclado); R = ré; C = cinto
+  if (!e.repeat && estado === 'dirigindo') { const p = teclado.pisca(e.code); if (p) ligarSeta(p); if (e.code === 'KeyR') trocaMarcha(); if (e.code === 'KeyC') porCinto(); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; teclaPc(e.code, false); });
 // spec 041 (do site): no painel do modo Teclado, a tecla apertada acende
-const teclasPc = new Map([...document.querySelectorAll('#pcPainel kbd')].map(k => [k.dataset.k, k]));
+let teclasPc = new Map();
+function montaPainelPc() {          // spec 059: o painel mostra as teclas do jeito escolhido
+  $('pcPainel').innerHTML = teclado.painel() + '<div class="pcLinha"><kbd data-k="KeyH">H</kbd><span>buzina</span><kbd data-k="KeyC">C</kbd><span>cinto</span><kbd data-k="KeyR">R</kbd><span>ré</span></div>';
+  teclasPc = new Map([...document.querySelectorAll('#pcPainel kbd')].map(k => [k.dataset.k, k]));
+}
+montaPainelPc();
 const teclaPc = (code, on) => { const k = teclasPc.get(code) || (code === 'KeyQ' ? teclasPc.get('KeyA') : code === 'KeyE' ? teclasPc.get('KeyD') : null); if (k) k.classList.toggle('on', on); };
 addEventListener('keydown', e => teclaPc(e.code, true));
 // spec 008: volante FIXO embaixo à esquerda, só vira (polegar esquerdo). Arrastar para o lado ou girar o aro;
@@ -427,8 +437,7 @@ function readThumb(e) {
 let rodaK = '';
 function passoVolante(dt) {
   if (thumb.id === null) {     // PC: ← → giram o volante desenhado (90° ≈ steer 0,9, como era antes)
-    const kL = keys.ArrowLeft, kR = keys.ArrowRight;          // spec 033: A/D agora são o pisca, não viram
-    thumb.alvo = ((kR ? 1 : 0) - (kL ? 1 : 0)) * 84;
+    thumb.alvo = -teclado.vira(keys) * 84;                     // spec 059: ← → (ou A/D no jeito WASD)
   }
   const k = thumb.id !== null || thumb.alvo ? 22 : 7;
   thumb.ang += (thumb.alvo - thumb.ang) * (1 - Math.exp(-dt * k));
@@ -510,7 +519,7 @@ function trocaMarcha() {
   if (estado !== 'dirigindo') return;
   if (Math.abs(carro.speed) > 0.5) { aviso('✋ Pare o carro para trocar a marcha', 1.8); return; }
   re = !re; ultimoHud = ''; carro.re = re; reBip = 0;
-  aviso(re ? (isTouchUI ? '🔙 Ré engatada — o acelerador anda para trás' : '🔙 Ré engatada — ↑ anda para trás · R volta pra frente') : '🚗 Marcha para frente', 2);
+  aviso(re ? (isTouchUI ? '🔙 Ré engatada — o acelerador anda para trás' : '🔙 Ré engatada — ' + teclado.reTexto()) : '🚗 Marcha para frente', 2);
 }
 let reBip = 0;
 // cinto (spec 018): começa sem (no ?capture começa COM, para os testes antigos; ?cinto=0 força sem). Pôr = clique +
@@ -547,18 +556,18 @@ function playerInput() {
   if (AUTO) return piloto.input(carro);
   // spec 018 (revisto a pedido do Maki): SEM CINTO O CARRO NÃO ANDA — como a retenção do art. 167
   if (!cinto) {
-    pedais.teclado(keys.ArrowUp || keys.KeyW, false, STEP);
-    if (pedais.frac > 0.02 || keys.ArrowUp || keys.KeyW) pedeCinto();
+    pedais.teclado(teclado.acel(keys, false), false, STEP);
+    if (pedais.frac > 0.02 || teclado.acel(keys, false)) pedeCinto();
     return { steer: 0, alvo: 0, brake: 1 };
   }
-  const kL = keys.ArrowLeft, kR = keys.ArrowRight;            // spec 033: A/D agora são o pisca, não viram
+  const vira = teclado.vira(keys), kL = vira > 0, kR = vira < 0;
   if (re) {                    // ré como num carro de verdade: acelerador (↑ ou o da tela) = para trás; ↓/espaço freia
-    pedais.teclado(keys.ArrowUp || keys.KeyW, keys.ArrowDown || keys.KeyS || keys.Space, STEP);
+    pedais.teclado(teclado.acel(keys, re), teclado.freio(keys, re), STEP);
     const steer = CONTROLE === 'volante' ? thumb.steer : ((kL ? 1 : 0) - (kR ? 1 : 0)) * 0.9;
     return { steer, alvo: pedais.frac * FIS.VMAX, brake: pedais.freio ? 1 : 0, re: true };
   }
   if (CONTROLE === 'pedais') {
-    pedais.teclado(keys.ArrowUp || keys.KeyW, keys.ArrowDown || keys.KeyS || keys.Space, STEP);
+    pedais.teclado(teclado.acel(keys, re), teclado.freio(keys, re), STEP);
     const d = piloto.direcao(carro), alvo = pedais.frac * FIS.VMAX;
     // PC: ← → seguradas assumem a direção (soltou → volta a direção automática)
     const steer = kL || kR ? ((kL ? 1 : 0) - (kR ? 1 : 0)) * 0.9 : d.steer;
@@ -566,7 +575,7 @@ function playerInput() {
   }
   // spec 008, modo volante: volante (polegar esquerdo) + o mesmo acelerador/freio (polegar direito). Sem direção
   // automática e sem o freio automático de curva (sem "teto"). No PC, ← → giram o volante (passoVolante).
-  pedais.teclado(keys.ArrowUp || keys.KeyW, keys.ArrowDown || keys.KeyS || keys.Space, STEP);
+  pedais.teclado(teclado.acel(keys, re), teclado.freio(keys, re), STEP);
   return { steer: thumb.steer, alvo: pedais.frac * FIS.VMAX, brake: pedais.freio ? 1 : 0 };
 }
 
@@ -904,8 +913,13 @@ function marcaModo() {          // spec 041: Toque/Teclado (as dicas mudam junto
   document.querySelectorAll('#aparelhoCtl [data-aparelho]').forEach(b => b.classList.toggle('on', b.dataset.aparelho === APARELHO));
   $('hintVolante').classList.toggle('hidden', APARELHO === 'pc');
   $('hintPc').classList.toggle('hidden', APARELHO !== 'pc');
-  $('hintPc').querySelector('.soVolante').classList.toggle('off', CONTROLE !== 'volante');
+  $('hintPc').innerHTML = teclado.dica();
+  $('teclasCtl').classList.toggle('hidden', APARELHO !== 'pc');            // spec 059: só no modo Teclado
+  document.querySelectorAll('#teclasCtl [data-teclas]').forEach(b => b.classList.toggle('on', b.dataset.teclas === TECLAS));
 }
+document.querySelectorAll('#teclasCtl [data-teclas]').forEach(b => b.addEventListener('click', () => {
+  TECLAS = b.dataset.teclas; lsGravar(LS_TECLAS, TECLAS); teclado = criarTeclado(TECLAS); montaPainelPc(); marcaModo();
+}));
 document.querySelectorAll('#aparelhoCtl [data-aparelho]').forEach(b => b.addEventListener('click', () => { APARELHO = b.dataset.aparelho; lsGravar(LS_APARELHO, APARELHO); marcaModo(); }));
 // modelo do carrinho (rosa com corações / azul com estrelas): ?cor=azul força; senão a última escolha
 const LS_COR = 'transitoFofo.cor';

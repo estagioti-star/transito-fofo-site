@@ -15,6 +15,7 @@ import { criarCarrosPatio } from '../mundo.js';
 import { criarVida } from './vida.js';
 import { dividirEmPedacos } from './pedacos.js';
 import { aplicaClimaCentro } from './clima.js';
+import { criarTeclado, MODOS_TECLAS, LS_TECLAS } from '../teclas.js';
 import { criarFiscal } from '../fiscal.js';
 import * as LEI from '../lei.js';
 import { criarHud } from '../hud.js';
@@ -105,16 +106,20 @@ const sons = criarSons();
 // --- controles
 const pedais = criarPedais({ vmaxKmh: FIS.VMAX * 3.6 });
 const keys = {};
+// spec 059: o jeito do teclado escolhido no menu do jogo ('setas' ou 'wasd'); ?teclas=… força; ?capture = 'setas'
+const TECLAS = MODOS_TECLAS.includes(Q.get('teclas')) ? Q.get('teclas') : CAPTURE ? 'setas' : (MODOS_TECLAS.includes(ler(LS_TECLAS)) ? ler(LS_TECLAS) : 'setas');
+const teclado = criarTeclado(TECLAS);
 addEventListener('keydown', e => {
   keys[e.code] = true; if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); if (e.code === 'KeyH') buzinar();
-  // spec 046: A/D (ou Q/E) pisca; R ré — iguais ao bairro
+  // spec 046: pisca (A/D ou ← →, conforme o jeito do teclado); R ré — iguais ao bairro
   if (!e.repeat && estado === 'dirigindo') {
-    if (e.code === 'KeyA' || e.code === 'KeyQ') ligarSeta('esq');
-    if (e.code === 'KeyD' || e.code === 'KeyE') ligarSeta('dir');
+    const p = teclado.pisca(e.code); if (p) ligarSeta(p);
     if (e.code === 'KeyR') trocaMarcha();
   }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
+$('pcPainel').innerHTML = teclado.painel() + '<div class="pcLinha"><kbd data-k="KeyH">H</kbd><span>buzina</span><kbd data-k="KeyR">R</kbd><span>ré</span></div>';
+$('hintPc').innerHTML = teclado.dica().replace(' · C cinto', '');
 const teclas = new Map([...document.querySelectorAll('#pcPainel kbd')].map(k => [k.dataset.k, k]));
 addEventListener('keydown', e => teclas.get(e.code)?.classList.add('on'));
 addEventListener('keyup', e => teclas.get(e.code)?.classList.remove('on'));
@@ -131,10 +136,9 @@ for (const ev of ['mousedown', 'mousemove', 'mouseup']) addEventListener(ev, e =
   pedais.mouse(e);
 });
 function entrada() {
-  pedais.teclado(keys.ArrowUp || keys.KeyW, keys.ArrowDown || keys.KeyS || keys.Space, STEP);
-  const kL = keys.ArrowLeft, kR = keys.ArrowRight;
-  // na ré, o acelerador (↑ ou o da tela) anda para trás (como no bairro)
-  return { steer: Math.max(-1, Math.min(1, volante.steer + ((kL ? 1 : 0) - (kR ? 1 : 0)) * 0.9)), alvo: pedais.frac * FIS.VMAX, brake: pedais.freio ? 1 : 0, re };
+  pedais.teclado(teclado.acel(keys, re), teclado.freio(keys, re), STEP);
+  // na ré, o acelerador (↑/S ou o da tela) anda para trás (como no bairro)
+  return { steer: Math.max(-1, Math.min(1, volante.steer + teclado.vira(keys) * 0.9)), alvo: pedais.frac * FIS.VMAX, brake: pedais.freio ? 1 : 0, re };
 }
 
 // ---- spec 046: pisca (seta) e ré, como no bairro (jogo.js): tocar liga e pisca ~1,5 Hz com tique-taque; tocar de
@@ -157,7 +161,7 @@ function trocaMarcha() {
   if (estado !== 'dirigindo') return;
   if (Math.abs(carro.speed) > 0.5) { hud.msg('✋ Pare o carro para trocar a marcha', 1.8); return; }
   re = !re; carro.re = re; reBip = 0; $('reBtn').classList.toggle('on', re);
-  hud.msg(re ? (APARELHO === 'pc' ? '🔙 Ré engatada — ↑ anda para trás · R volta pra frente' : '🔙 Ré engatada — o acelerador anda para trás') : '🚗 Marcha para frente', 2);
+  hud.msg(re ? (APARELHO === 'pc' ? '🔙 Ré engatada — ' + teclado.reTexto() : '🔙 Ré engatada — o acelerador anda para trás') : '🚗 Marcha para frente', 2);
 }
 $('reBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); trocaMarcha(); });
 function passoRe(dt) { if (re && carro.speed < -0.2) { reBip -= dt; if (reBip <= 0) { reBip = 0.9; sons.re(); } } else reBip = 0; }
