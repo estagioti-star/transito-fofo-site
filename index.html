@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ff4fa3">
+<meta name="robots" content="noindex">
+<title>Trânsito Fofo — o bairro</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="carregando">
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <!-- spec 008: 3 faixas. Topo = 1 linha (placar + destino) e a barra única de GPS; meio livre; painel embaixo -->
+  <div id="topo">
+    <div id="placar"><span>⭐ <b id="estrelas">0</b></span><span>🪪 <b id="pontosCnh">0</b></span><span>💰 <b id="dinheiro">1.000,00</b></span></div>
+    <div id="rumo"><div id="seta"><svg viewBox="0 0 30 30"><path d="M15 4 L24 15 H18.5 V26 H11.5 V15 H6 Z" fill="#fff" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></div><div><small id="rumoIco">👵💊</small> <b id="rumoTxt">0 m</b></div></div>
+    <div id="missaoTxt"></div>
+  </div>
+  <div id="barra">
+    <div id="gps" class="hidden"><span id="gpsTxt"></span> <span id="gpsSub">liga a seta!</span></div>
+    <div id="proximo" class="hidden"></div>
+    <div id="acelCurva">↪ curva!</div>
+    <div id="ambChip" class="hidden">🚑 vem atrás</div>
+  </div>
+  <div id="ladoEsq" class="lado hidden"></div><div id="ladoDir" class="lado hidden"></div>
+  <div id="aviso" class="hidden"><div id="avisoTitulo"></div><div id="avisoLinha"></div><div id="avisoExplica"></div></div>
+  <div id="velBox" class="ui" title="tocar = engatar/desengatar a ré (R)"><div id="velNum"><div id="velTxt">0</div><small id="velUn">km/h</small></div><div id="limPlaca" title="limite da via">40</div></div>
+  <div id="msg" class="hidden"></div>
+  <div id="dica" class="hidden"><div id="dicaTxt"></div><div id="dicaSub"></div></div>
+</div>
+
+<!-- spec 007/008: botões da seta (pisca), dos lados do velocímetro -->
+<div id="setas" class="hidden">
+  <button id="setaEsq" class="setaBtn ui" data-lado="esq" aria-label="seta para a esquerda"><svg viewBox="0 0 40 40"><path d="M5 20 L19 7 V14 H35 V26 H19 V33 Z" fill="#fff" stroke="#b35d00" stroke-width="2.2" stroke-linejoin="round"/></svg></button>
+  <button id="setaDir" class="setaBtn ui" data-lado="dir" aria-label="seta para a direita"><svg viewBox="0 0 40 40"><path d="M35 20 L21 7 V14 H5 V26 H21 V33 Z" fill="#fff" stroke="#b35d00" stroke-width="2.2" stroke-linejoin="round"/></svg></button>
+</div>
+
+<!-- spec 018: cinto de segurança (antes de sair; tecla C no PC) — o carro anda mesmo sem cinto (jogo livre) -->
+<button id="cintoBtn" class="ui hidden" aria-label="pôr o cinto de segurança">🔓 Pôr o cinto</button>
+
+<!-- spec 008: volante fixo embaixo à esquerda (só vira; coração = buzina) -->
+<div id="thumb" class="hidden">
+  <div id="stick"><div class="wheel" id="wheel"></div></div>
+</div>
+
+<!-- spec 041 (do site): no modo Teclado, sem pedal/volante/setas na tela — painel com as teclas (acendem ao apertar) -->
+<div id="pcPainel" class="hidden">
+  <div class="pcLinha"><kbd data-k="ArrowUp">↑</kbd><span>acelera</span><kbd data-k="ArrowDown">↓</kbd><kbd data-k="Space" class="largo">espaço</kbd><span>freia</span></div>
+  <div class="pcLinha"><span class="soVolante"><kbd data-k="ArrowLeft">←</kbd><kbd data-k="ArrowRight">→</kbd><span>vira</span></span><kbd data-k="KeyA">A</kbd><kbd data-k="KeyD">D</kbd><span>pisca</span></div>
+  <div class="pcLinha"><kbd data-k="KeyH">H</kbd><span>buzina</span><kbd data-k="KeyC">C</kbd><span>cinto</span><kbd data-k="KeyR">R</kbd><span>ré</span></div>
+</div>
+
+<div id="pedais" class="hidden">
+  <div id="freio" class="pedal">
+    <div class="sola"><div class="nerv"></div><div class="rot"><span class="ico">✋</span><b>FREIO</b></div></div>
+  </div>
+  <div id="acel" class="pedal">
+    <div id="acelTrilho" class="sola">
+      <div class="nerv"></div>
+      <div id="acelFill"></div>
+      <div id="acelFaixa"><span id="acelLim">40</span></div>
+      <div id="acelVel"></div>
+      <div id="acelPe"><svg viewBox="-20 -20 40 40"><path d="M 0 -4 C 0 -14 -16 -16 -16 -4 C -16 6 -4 12 0 18 C 4 12 16 6 16 -4 C 16 -16 0 -14 0 -4 Z" transform="translate(0 -2)" fill="#fff" stroke="#1fae4b" stroke-width="2.4" stroke-linejoin="round"/></svg></div>
+      <div id="acelDica">👆<br>arrasta</div>
+    </div>
+    <div id="acelRot">ACELERA</div>
+  </div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <div class="bigIcon">🚗💗</div>
+    <h1>Trânsito Fofo</h1>
+    <!-- spec 045: o Centro de Chapecó é um mapa DENTRO do jogo: escolhe aqui (ou na tela de missões) e o Dirigir entra nele -->
+    <div id="mapaCtl" class="modo ui"><span data-mapa="bairro">🏘️ Bairro</span><span data-mapa="chapeco">🏙️ Chapecó</span></div>
+    <div id="missaoAtual" class="missaoAtual ui" role="button" aria-label="escolher a missão"><span class="ico">⏳</span><span><b>Carregando o jogo…</b><small>Só um instante</small></span></div>
+    <p id="menuCnh" class="menuCnh"></p>
+    <p class="sub">🚗 <b>Mão direita</b> · 🛑 PARE e vermelho · 🚶 Pedestre na faixa<br>🔒 Sem cinto não anda · 🧭 Segue as setas</p>
+    <div id="tempoCtl" class="modo ui"><span data-tempo="sol">☀️ Sol</span><span data-tempo="chuva">🌧️ Chuva</span><span data-tempo="neblina">🌫️ Neblina</span></div>
+    <!-- spec 041 (junta com a versão do site): Meninas/Meninos (o tema inteiro rosa/azul), Toque/Teclado e Volante/Pedais -->
+    <div id="corCtl" class="modo ui"><span data-cor="rosa">💗 Meninas</span><span data-cor="azul">💙 Meninos</span></div>
+    <div id="aparelhoCtl" class="modo ui"><span data-aparelho="toque">📱 Toque</span><span data-aparelho="pc">💻 Teclado</span></div>
+    <button id="playBtn">🚗 Dirigir</button>
+    <p class="hint hidden" id="hintPc">⌨️ ↑ acelera · ↓ ou espaço freia<span class="soVolante"> · ← → vira</span><br>A/D (ou Q/E) pisca · H buzina · C cinto · R ré</p>
+    <p class="hint" id="hintVolante">🎡 Polegar esquerdo no volante: arrasta ou gira · coração = buzina<br>🦶 Polegar direito no pedal: mais alto = mais rápido<br>Desliza pra cima = ✋ freio · ⬅️ ➡️ seta antes de virar<br>Toque no velocímetro = ré<br>PC: ← → vira · ↑ acelera · ↓ ou espaço freia · <b>A/D pisca</b> · H buzina · C cinto<br>Ré: parado, aperte R · ↑ anda para trás · R volta</p>
+    <div id="muteBtn" class="mute ui">🔊 Som ligado</div>
+  </div>
+</div>
+
+<!-- spec 051: a "foto do radar" (aparece quando o radar pega o carro acima do limite) -->
+<div id="fotoRadar" class="hidden"><div class="fotoTopo">📸 FISCALIZAÇÃO ELETRÔNICA</div><img id="fotoImg" alt="foto do radar"><div id="fotoTxt"></div></div>
+<div id="flash" class="hidden"></div>
+<div id="voo"></div>
+
+<!-- spec 031: tela de missões (cartões com o que ensina, dificuldade e medalha) -->
+<div id="telaMissoes" class="overlay hidden">
+  <div class="card telaM ui">
+    <h2>🗺️ Missões</h2>
+    <p class="sub">Toque numa missão para escolher</p>
+    <div id="missaoCtl" class="missoes"></div>
+    <button id="fechaMissoes" class="sec">⬅️ Voltar</button>
+  </div>
+</div>
+
+<div id="relatorio" class="overlay hidden">
+  <div class="card rel ui">
+    <div class="relTopo"><span class="bigIcon" id="relIcone">💊</span><div><h2 id="relTitulo">Chegou na farmácia!</h2><p class="sub"><span id="relSub">A vovó agradece 💗</span> <span id="relTempo"></span></p></div><span id="relMedalha" class="relMedalha"></span></div>
+    <div class="relEstrelas">⭐ <b id="relEstrelas">0</b></div>
+    <ul id="relLista"></ul>
+    <div class="relTotal">💰 Multas: <b id="relTotal">R$ 0,00</b></div>
+    <div class="relCnh">🪪 <b id="relPontos">0</b> pontos na CNH<br><span id="relSusp"></span></div>
+    <div class="relBotoes"><button id="deNovoBtn">🚗 De novo</button><button id="menuBtn" class="sec">🏠 Missões</button></div>
+  </div>
+</div>
+
+<div id="fps" class="hidden"></div>
+<script type="module" src="src/jogo.js"></script>
+</body>
+</html>

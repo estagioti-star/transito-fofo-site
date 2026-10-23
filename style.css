@@ -1,0 +1,439 @@
+/* tema (spec 015): os rosas da interface viram variáveis; body.tema-azul troca pelo mesmo tom em azul (matiz 215°).
+   Vermelho de multa/limite, amarelo e verde não mudam (são cores de trânsito). */
+:root {
+  --t-3a1028: #3a1028;
+  --t-5a2a4a: #5a2a4a;
+  --t-6a2a4a: #6a2a4a;
+  --t-78003c-rgb: 120 0 60;
+  --t-8a2a5a: #8a2a5a;
+  --t-8a4a6a: #8a4a6a;
+  --t-a00050-rgb: 160 0 80;
+  --t-b3125f: #b3125f;
+  --t-c2185b: #c2185b;
+  --t-c2185b-rgb: 194 24 91;
+  --t-e0157a: #e0157a;
+  --t-ff2d8f: #ff2d8f;
+  --t-ff3d9a: #ff3d9a;
+  --t-ff4fa3: #ff4fa3;
+  --t-ff4fa3-rgb: 255 79 163;
+  --t-ff6fb5: #ff6fb5;
+  --t-ffa6d2: #ffa6d2;
+  --t-ffc1de: #ffc1de;
+  --t-ffc4df: #ffc4df;
+  --t-ffd1e6: #ffd1e6;
+  --t-ffd6ec-rgb: 255 214 236;
+  --t-ffd9ea: #ffd9ea;
+  --t-ffe3f0: #ffe3f0;
+  --t-fff0f7: #fff0f7;
+  --t-fff5fa: #fff5fa;
+}
+body.tema-azul {
+  --t-3a1028: #0b1a2f;
+  --t-5a2a4a: #223652;
+  --t-6a2a4a: #223c62;
+  --t-78003c-rgb: 0 42 105;
+  --t-8a2a5a: #224982;
+  --t-8a4a6a: #405b85;
+  --t-a00050-rgb: 0 58 145;
+  --t-b3125f: #0c4baa;
+  --t-c2185b: #1155b9;
+  --t-c2185b-rgb: 17 85 185;
+  --t-e0157a: #0e5fd8;
+  --t-ff2d8f: #1e78ff;
+  --t-ff3d9a: #1975ff;
+  --t-ff4fa3: #2b80ff;
+  --t-ff4fa3-rgb: 43 128 255;
+  --t-ff6fb5: #4b93ff;
+  --t-ffa6d2: #82b4ff;
+  --t-ffc1de: #93beff;
+  --t-ffc4df: #96c0ff;
+  --t-ffd1e6: #a3c8ff;
+  --t-ffd6ec-rgb: 168 203 255;
+  --t-ffd9ea: #abcdff;
+  --t-ffe3f0: #b5d3ff;
+  --t-fff0f7: #c2daff;
+  --t-fff5fa: #c7ddff;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: #8fd0ff;
+  font-family: "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
+}
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#hud, .overlay, #pedais { height: 100vh; height: 100dvh; bottom: auto; }
+.hidden { display: none !important; }
+
+/* ---------- Tela inicial ---------- */
+.overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: radial-gradient(circle at 50% 30%, rgb(var(--t-ffd6ec-rgb) / .25), rgb(var(--t-ff4fa3-rgb) / .3)); }
+.card { background: #fff; border-radius: 28px; padding: 20px 22px; text-align: center; max-width: 420px; width: 100%;
+  max-height: 100%; overflow: auto; touch-action: pan-y; border: 5px solid var(--t-ff4fa3); box-shadow: 0 10px 30px rgb(var(--t-c2185b-rgb) / .35);
+  background-image: repeating-linear-gradient(45deg, #fff 0 14px, var(--t-fff5fa) 14px 28px); }
+.bigIcon { font-size: 64px; line-height: 1.1; }
+h1 { margin: 8px 0 4px; font-size: 36px; color: var(--t-ff2d8f); text-shadow: 0 3px 0 var(--t-ffd1e6); }
+.sub { margin: 0 0 16px; color: var(--t-8a4a6a); font-weight: 700; font-size: 17px; line-height: 1.4; }
+.hint { color: var(--t-8a4a6a); font-size: 14px; margin: 14px 0 0; line-height: 1.5; }
+button { font: inherit; font-size: 26px; font-weight: 900; color: #fff; background: linear-gradient(var(--t-ff6fb5), var(--t-ff2d8f));
+  border: none; border-radius: 40px; padding: 14px 36px; box-shadow: 0 5px 0 var(--t-b3125f); cursor: pointer; }
+button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--t-b3125f); }
+.mute { display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 16px; font-weight: 800; font-size: 14px;
+  color: var(--t-8a4a6a); border: 2px solid var(--t-ffc1de); cursor: pointer; background: #fff; }
+#fps { position: fixed; bottom: 4px; right: 6px; color: #fff; font: 700 12px monospace; background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 8px; pointer-events: none; }
+
+/* ---------- flash do radar e estrelinhas voando ---------- */
+#flash { position: fixed; inset: 0; background: #fff; pointer-events: none; opacity: 0; }
+#flash.pisca { animation: flash .55s ease-out; }
+/* spec 051: foto do radar — cartão de foto (polaroide) com o carro visto do poste do radar */
+#fotoRadar { position: fixed; right: 10px; top: calc(env(safe-area-inset-top, 0px) + 92px); width: min(230px, 46vw); z-index: 8; pointer-events: none;
+  background: #fffdf6; border-radius: 6px; padding: 7px 7px 9px; box-shadow: 0 6px 18px rgba(0,0,0,.35); transform: rotate(2.5deg);
+  font: 700 11px/1.35 ui-monospace, Consolas, monospace; color: #222; text-shadow: none; }
+#fotoRadar.entra { animation: fotoEntra .45s cubic-bezier(.2,1.4,.4,1); }
+@keyframes fotoEntra { from { transform: translateX(120%) rotate(12deg); opacity: 0; } to { transform: rotate(2.5deg); opacity: 1; } }
+#fotoRadar .fotoTopo { background: #111; color: #ffd23f; font-weight: 900; font-size: 11px; padding: 3px 6px; border-radius: 3px 3px 0 0; letter-spacing: .5px; }
+#fotoImg { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; filter: grayscale(.55) sepia(.35) contrast(1.15); background: #333; }
+#fotoTxt { margin-top: 5px; }
+#fotoTxt b { color: #c8102e; font-size: 13px; }
+@keyframes flash { 0% { opacity: .95 } 100% { opacity: 0 } }
+#voo { position: fixed; inset: 0; pointer-events: none; }
+.voa.perde { color: #ff3b3b; text-shadow: 0 2px 0 #fff, 0 0 8px rgba(0,0,0,.45); }
+.voa { position: fixed; transform: translate(0, 0); margin: -16px 0 0 -70px; width: 140px; white-space: nowrap; text-align: center; font-size: 28px; font-weight: 900;
+  color: #ffd84d; text-shadow: 0 2px 0 var(--t-c2185b), 0 0 8px rgba(0,0,0,.4); transition: transform 1.1s cubic-bezier(.5,-0.3,.6,1), opacity 1.1s ease-in; }
+
+/* ---------- relatório da viagem ---------- */
+#relatorio { z-index: 5; background: rgb(var(--t-ff4fa3-rgb) / .35); }
+.card.rel { padding: 14px 16px 16px; text-align: left; }
+.relTopo { display: flex; align-items: center; gap: 10px; }
+.relTopo .bigIcon { font-size: 46px; }
+.relTopo h2 { margin: 0; font-size: 24px; color: var(--t-ff2d8f); }
+.relTopo .sub { margin: 2px 0 0; font-size: 15px; }
+.relEstrelas { text-align: center; font-size: 40px; font-weight: 900; color: #ffb400; margin: 6px 0 4px; text-shadow: 0 2px 0 #ffe6a0; }
+#relLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+#relLista li { border-radius: 14px; padding: 6px 10px; font-weight: 800; font-size: 15px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+#relLista li b { margin-left: auto; white-space: nowrap; }
+#relLista li small.lin { flex-basis: auto; order: 0; font-size: 13px; }
+#relLista li small { flex-basis: 100%; order: 3; font-weight: 700; color: var(--t-8a4a6a); font-size: 13px; }
+#relLista li.ok { background: #e8fbe9; color: #1f7a35; }
+#relLista li.multa, #relLista li.bat { background: #ffe8e8; color: #b3121b; }
+.relTotal { margin-top: 10px; text-align: center; font-size: 21px; font-weight: 900; color: #b3121b; background: #fff0f0; border-radius: 16px; padding: 8px; border: 3px solid #ffc1c1; }
+#relatorio.semMulta .relTotal { color: #1f7a35; background: #e8fbe9; border-color: #b8ecc0; }
+.relTotal b { font-size: 25px; }
+.relCnh { text-align: center; margin: 8px 0 12px; font-weight: 800; color: #5a3a4a; font-size: 16px; line-height: 1.5; }
+#relSusp.ruim { color: #b3121b; } #relSusp.bom { color: #1f7a35; }
+.card.rel button { display: block; margin: 0 auto; font-size: 22px; padding: 12px 26px; }
+.missao { margin: 0 0 8px; color: var(--t-e0157a); font-size: 18px; font-weight: 800; }
+
+/* ---------- Pedais (spec 005): acelerador deslizante à direita, freio à esquerda ---------- */
+#pedais { --f: 0; --lim: .57; --v: 0; --pad: 14px; position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+.pedal .sola { position: relative; border-radius: 30px; transition: transform .07s ease-out, box-shadow .07s ease-out, filter .07s; }
+.pedal .sola::after { content: ''; position: absolute; inset: 0; border: 4px solid #fff; border-radius: inherit; pointer-events: none; }
+.pedal .nerv { position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: repeating-linear-gradient(to top, transparent 0 15px, rgba(0,60,20,.13) 15px 19px); }
+
+/* acelerador */
+/* spec 016: acelerador VERDE (anda) e freio VERMELHO (para), como o semáforo — iguais nos dois temas */
+#acelTrilho { position: absolute; inset: 0; background: linear-gradient(90deg, #c8f5cf, #8ee09b 55%, #5fcd74);
+  box-shadow: 0 7px 0 #1f7a35, 0 10px 18px rgba(0,0,0,.28); }
+#acelFill { position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(to top, #8fe39c 0, #1fae4b calc(var(--pad) + var(--lim) * (100% - 2 * var(--pad))),
+    #ffb347 calc(var(--pad) + var(--lim) * (100% - 2 * var(--pad))), #ff7a00 100%);     /* acima do limite: laranja (vermelho é do freio) */
+  clip-path: inset(calc(var(--pad) + (1 - var(--f)) * (100% - 2 * var(--pad))) 0 0 0 round 16px 16px 30px 30px); }
+#acelFaixa { position: absolute; left: -2px; right: -2px; height: 9px; transform: translateY(50%); border-radius: 5px;
+  bottom: calc(var(--pad) + var(--lim) * (100% - 2 * var(--pad))); transition: bottom .35s ease-out;
+  background: linear-gradient(#fff3a6, #ffcc1f 45%, #e6a300); box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.3); z-index: 2; }
+#acelLim { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); background: #ffd23f; color: #6b4200;
+  font-weight: 900; font-size: 15px; line-height: 1; padding: 5px 8px; border-radius: 12px; border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25); text-shadow: none; }
+#acelLim::after { content: ''; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); border: 6px solid transparent; border-left-color: #fff; }
+#acelVel { position: absolute; left: 12px; right: 12px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.9);
+  bottom: calc(var(--pad) + var(--v) * (100% - 2 * var(--pad))); transform: translateY(50%); box-shadow: 0 0 0 1px rgb(var(--t-a00050-rgb) / .35); z-index: 1; }
+#acelPe { position: absolute; left: 50%; width: 62px; height: 62px; margin-left: -31px; z-index: 3;
+  bottom: calc(var(--pad) + var(--f) * (100% - 2 * var(--pad))); transform: translateY(50%) scale(.8); opacity: 0;
+  transition: opacity .1s, transform .1s; filter: drop-shadow(0 3px 3px rgba(0,70,25,.4)); }
+#acelPe svg { width: 100%; height: 100%; display: block; }
+#acelDica { position: absolute; left: 0; right: 0; bottom: 18%; text-align: center; color: #1f7a35; font-weight: 900; font-size: 15px;
+  line-height: 1.15; text-shadow: 0 1px 0 #fff; animation: dica 1.4s ease-in-out infinite; }
+@keyframes dica { 0%, 100% { transform: translateY(6px) } 50% { transform: translateY(-10px) } }
+#acelRot { position: absolute; left: 50%; top: -13px; transform: translateX(-50%) rotate(-3deg); background: #1fae4b; color: #fff;
+  font-weight: 900; font-size: 13px; letter-spacing: 1px; padding: 2px 9px; border-radius: 10px; border: 2px solid #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,.25); text-shadow: none; z-index: 4; white-space: nowrap; transition: transform .07s; }
+/* afunda ao toque */
+#acel.apertado #acelTrilho { transform: translateY(5px) scaleX(.95);
+  box-shadow: 0 2px 0 #1f7a35, 0 4px 8px rgba(0,0,0,.25), 0 0 18px 4px rgba(31,174,75,.45); }
+#acel.apertado #acelRot { transform: translateX(-50%) translateY(5px) rotate(-3deg); }
+#acel.apertado #acelPe { opacity: 1; transform: translateY(50%) scale(1); }
+#acel.apertado #acelDica, #acel.usado #acelDica { display: none; }
+#acel.acima #acelPe path { fill: #fff1de; stroke: #ff7a00; }
+#acel.acima #acelTrilho::after { border-color: #ffd9b0; animation: alerta .5s ease-in-out infinite alternate; }
+@keyframes alerta { from { box-shadow: 0 0 0 0 rgba(255,122,0,.0) } to { box-shadow: 0 0 0 5px rgba(255,122,0,.6) } }
+
+/* freio */
+#freio .sola { position: absolute; inset: 0; background: radial-gradient(circle at 35% 25%, #ff6a5c, #e8262f 55%, #b3121b);
+  box-shadow: 0 7px 0 #7a0a0a, 0 10px 18px rgba(0,0,0,.28); }
+#freio .nerv { background: repeating-linear-gradient(to top, transparent 0 13px, rgba(90,0,10,.14) 13px 17px); }
+#freio .rot { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: #fff; text-shadow: 0 2px 0 #9b1020; }
+#freio .ico { font-size: 38px; line-height: 1; text-shadow: none; filter: drop-shadow(0 2px 0 rgba(120,0,20,.45)); }
+#freio b { font-size: 21px; font-weight: 900; letter-spacing: 1.5px; }
+#freio.apertado .sola { transform: perspective(500px) rotateX(10deg) translateY(6px) scale(.95); filter: brightness(.9) saturate(1.15);
+  box-shadow: 0 1px 0 #7a0a0a, 0 3px 6px rgba(0,0,0,.25), 0 0 0 7px rgba(255,70,50,.45), 0 0 22px 6px rgba(255,40,30,.5); }
+#freio.apertado .sola::after { border-color: #ffe1e1; }
+#freio.apertado .ico { animation: aperta .25s ease-out; }
+@keyframes aperta { 0% { transform: scale(1) } 40% { transform: scale(1.25, .8) } 100% { transform: scale(1) } }
+
+/* escolha do controle no menu */
+.modo { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 14px; background: var(--t-ffe3f0); border-radius: 22px; border: 2px solid var(--t-ffc1de); }
+.modo span { padding: 7px 14px; border-radius: 18px; font-weight: 900; font-size: 17px; color: var(--t-8a4a6a); cursor: pointer; }
+.modo span.on { background: linear-gradient(var(--t-ff6fb5), var(--t-ff2d8f)); color: #fff; box-shadow: 0 3px 0 var(--t-b3125f); }
+#corCtl { display: flex; width: max-content; margin: 0 auto 10px; }
+#corCtl span[data-cor=azul].on { background: linear-gradient(#6fb0ff, #2d74ff); box-shadow: 0 3px 0 #1249b3; }
+
+.setaBtn { pointer-events: auto; width: 46px; height: 46px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #ffd98a, #f5a623 60%, #d98400); border: 3px solid #fff;
+  box-shadow: 0 4px 0 #9a5800, 0 6px 10px rgba(0,0,0,.25); filter: saturate(.75) brightness(.95); touch-action: none; }
+.setaBtn svg { width: 27px; height: 27px; display: block; }
+.reBtn { font: 900 18px/1 system-ui, sans-serif; color: #fff; }                         /* spec 046: ré no Centro */
+.reBtn.on { background: radial-gradient(circle at 35% 30%, #ffffff, #dfe7ff 55%, #b9c7f0); color: #2b3a8a; }
+body.centro.modo-volante #setas { width: 150px; margin-left: -75px; }
+.setaBtn:active { transform: translateY(3px); box-shadow: 0 2px 0 #9a5800, 0 4px 8px rgba(0,0,0,.25); }
+.setaBtn.ligada { filter: none; border-color: #fff3c4; }
+.setaBtn.ligada.aceso { background: radial-gradient(circle at 35% 30%, #fff6c8, #ffd000 55%, #ffae00);
+  box-shadow: 0 5px 0 #9a5800, 0 0 0 5px rgba(255,200,0,.55), 0 0 22px 8px rgba(255,190,0,.75); }
+
+/* =====================================================================================================================
+   spec 008 — interface em 3 faixas: TOPO (placar + barra de GPS, ≤ 22% da altura) · MEIO livre (22–68%) · PAINEL (≥ 70%)
+   Os avisos temporários (multa, dica, boas-vindas, indicadores do PARE) entram só no alto do meio (22% a 37%).
+   ===================================================================================================================== */
+:root { --sb: env(safe-area-inset-bottom, 0px); --st: env(safe-area-inset-top, 0px); --m: 10px; --pedalW: clamp(66px, 20vw, 80px);
+  --volW: min(156px, 40vw); --volPedW: clamp(60px, 17vw, 72px); --painelBase: calc(var(--sb) + 10px); }
+
+/* ---------- topo: 1 linha fina ---------- */
+#hud { position: fixed; inset: 0; pointer-events: none; color: #fff; text-shadow: 0 2px 0 var(--t-c2185b), 0 0 6px rgba(0,0,0,.35); }
+#topo { position: absolute; top: calc(var(--st) + 6px); left: 6px; right: 6px; display: flex; justify-content: center; align-items: center; gap: 5px; }
+#missaoTxt { display: none; }
+#placar { display: flex; gap: 5px; }
+#placar span, #rumo { background: rgba(255,255,255,.92); color: var(--t-8a2a5a); text-shadow: none; font-weight: 900; font-size: 15px; line-height: 1;
+  padding: 5px 8px; border-radius: 13px; box-shadow: 0 2px 5px rgba(0,0,0,.18); white-space: nowrap; transition: transform .15s; }
+#placar span.pula { animation: pula .45s ease-out; }
+#placar span.treme { animation: tremePlacar .5s ease-in-out; background: #ffe1e1; }
+@keyframes tremePlacar { 0%, 100% { transform: translateX(0) } 20% { transform: translateX(-5px) rotate(-4deg) } 40% { transform: translateX(5px) rotate(4deg) }
+  60% { transform: translateX(-4px) rotate(-2deg) } 80% { transform: translateX(3px) } }
+@keyframes pula { 0% { transform: scale(1) } 35% { transform: scale(1.35) } 100% { transform: scale(1) } }
+#rumo { display: flex; align-items: center; gap: 4px; padding: 2px 8px 2px 3px; }
+#rumo small { font-size: 12px; }
+#seta { position: relative; width: 21px; height: 21px; border-radius: 50%; background: var(--t-ff4fa3); flex: none; }
+#seta svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 370px) { #placar span, #rumo { font-size: 13px; padding: 5px 6px; } #rumo { padding: 2px 6px 2px 3px; } #topo, #placar { gap: 4px; } }
+
+/* ---------- barra única de GPS: conversão + próximo sinal + "curva!" (substitui balão, chips e o chip do pedal) ---------- */
+#barra { position: absolute; top: calc(var(--st) + 40px); left: 6px; right: 6px; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 5px; }
+#gps { background: #1a73e8; color: #fff; text-shadow: none; border: 2px solid #fff; border-radius: 14px; padding: 4px 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25); font-weight: 900; font-size: 15px; line-height: 1.15; white-space: nowrap; max-width: 100%; animation: popB .35s ease-out; }
+#gpsSub { color: #ffd23f; font-size: 14px; }
+#gpsSub::before { content: '· '; color: #fff; }
+#gps.ok { background: #1f9d55; }
+#gps.ok #gpsSub { color: #fff; }
+#ambChip { font-weight: 900; font-size: 15px; padding: 4px 10px; border-radius: 14px; border: 2px solid #fff; color: #fff; text-shadow: none;
+  animation: giroflex .5s steps(1) infinite; }
+@keyframes giroflex { 0% { background: #e8262f; } 50% { background: #2a6aff; } }
+#gps.espera { background: #e8262f; animation: none; }
+#gps.agora { background: var(--t-ff4fa3); animation: gpsAgora .45s ease-in-out infinite alternate; }
+@keyframes gpsAgora { from { transform: scale(1); } to { transform: scale(1.12); } }
+#proximo { display: flex; gap: 5px; }
+.chip { background: rgba(255,255,255,.95); color: var(--t-5a2a4a); text-shadow: none; font-weight: 900; font-size: 15px; line-height: 1.15; padding: 4px 9px; border-radius: 14px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.2); border: 2px solid #8a909c; white-space: nowrap; }
+.chip.vermelho { border-color: #e8262f; background: #ffe3e3; color: #a0101a; }
+.chip.amarelo { border-color: #f2b705; background: #fff6d6; color: #7a5a00; }
+.chip.verde { border-color: #1fae4b; background: #e3fbe8; color: #11672c; }
+.chip.pare { border-color: #e8262f; }
+#acelCurva { background: #fff; color: var(--t-c2185b); border: 2px solid var(--t-ff4fa3); font-weight: 900; font-size: 15px; line-height: 1.15; padding: 4px 9px; border-radius: 14px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.2); text-shadow: none; white-space: nowrap; animation: popB .3s ease-out; }
+#acelCurva:not(.on) { display: none; }
+@keyframes popB { from { transform: scale(.4); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+@media (max-width: 370px) { #gps, .chip, #acelCurva { font-size: 14px; padding: 3px 7px; } #gpsSub { font-size: 13px; } }
+
+/* ---------- avisos temporários: só no alto do meio (de 22% a 37% da altura) ---------- */
+#aviso, #dica { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); width: min(94vw, 440px); background: rgba(255,255,255,.96); color: var(--t-3a1028);
+  text-shadow: none; border: 3px solid #e8262f; border-radius: 16px; padding: 5px 10px 6px; box-shadow: 0 5px 14px rgba(0,0,0,.28); animation: pop .45s ease-out; text-align: center; }
+#dica { border-color: #ff9f1c; }
+#avisoTitulo { font-weight: 900; font-size: 21px; line-height: 1.15; color: #d0121b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#avisoLinha .nw { white-space: nowrap; }
+#avisoLinha { font-weight: 900; font-size: 16px; line-height: 1.2; margin-top: 2px; white-space: nowrap; letter-spacing: -.3px; }
+#avisoExplica { font-weight: 800; font-size: 16px; color: var(--t-6a2a4a); margin-top: 2px; line-height: 1.2; }
+#dicaTxt { font-weight: 900; font-size: 20px; line-height: 1.15; }
+#dicaSub { font-weight: 800; font-size: 15px; color: var(--t-6a2a4a); margin-top: 2px; line-height: 1.2; }
+@media (max-width: 370px) { #aviso, #dica { width: 97vw; padding: 4px 6px 5px; } #avisoLinha { font-size: 15px; letter-spacing: -.5px; } #avisoTitulo { font-size: 20px; } #avisoExplica, #dicaSub { font-size: 15px; } }
+/* boas-vindas / acertos: pílula de 1 linha no alto do meio */
+#msg { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: 17px; font-weight: 900; line-height: 1.15;
+  background: rgb(var(--t-ff4fa3-rgb) / .9); border: 2px solid #fff; border-radius: 15px; padding: 3px 12px 4px; box-shadow: 0 3px 8px rgba(0,0,0,.2); text-shadow: 0 1px 0 var(--t-b3125f);
+  text-align: center; width: max-content; max-width: 92vw; white-space: pre-line; animation: pop .5s ease-out; }
+@keyframes pop { from { transform: translateX(-50%) scale(.3); opacity: 0 } to { transform: translateX(-50%) scale(1); opacity: 1 } }
+/* indicadores do PARE: pequenos, nas bordas, logo abaixo da linha das boas-vindas */
+.lado { position: absolute; top: calc(22% + 34px); font-weight: 900; font-size: 14px; line-height: 1.1; padding: 4px 9px; border-radius: 13px; text-shadow: none;
+  border: 2px solid #fff; box-shadow: 0 3px 8px rgba(0,0,0,.3); white-space: nowrap; }
+#ladoEsq { left: max(6px, env(safe-area-inset-left)); }
+#ladoDir { right: max(6px, env(safe-area-inset-right)); }
+.lado.vem { background: #e8262f; color: #fff; animation: piscaLado .5s ease-in-out infinite alternate; }
+.lado.livre { background: #1fae4b; color: #fff; }
+@keyframes piscaLado { from { transform: scale(1) } to { transform: scale(1.07) } }
+#hud.cartao .lado { visibility: hidden; }      /* o cartão de multa/dica (4 s) ocupa o lugar; os indicadores voltam depois */
+
+/* ---------- painel embaixo (≥ 70% da altura): velocímetro no centro, setas dos lados ---------- */
+#velBox { position: absolute; left: 50%; margin-left: -45px; width: 90px; height: 54px; bottom: calc(var(--painelBase) + 12px);
+  display: flex; align-items: center; justify-content: center; gap: 4px; background: rgba(255,255,255,.88); color: #333; text-shadow: none;
+  padding: 0 5px 0 4px; border-radius: 18px; box-shadow: 0 3px 8px rgba(0,0,0,.25); border: 3px solid var(--t-ff4fa3); }
+#velNum { display: flex; flex-direction: column; align-items: center; line-height: 1; min-width: 36px; }
+#velTxt { font-size: 27px; font-weight: 900; line-height: 1; }
+#velNum small { font-size: 10px; font-weight: 800; color: #777; margin-top: 1px; }
+#limPlaca { width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 4px solid #e8262f; flex: none;
+  display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; color: #111; }
+#velBox.acima { background: #ffe1e1; border-color: #e8262f; animation: treme .35s ease-in-out infinite alternate; }
+#velBox.acima #velTxt { color: #e8262f; }
+#velBox { pointer-events: auto; cursor: pointer; }
+#velBox.re { background: #fff; border-color: #333; }
+#velBox.re #velUn { color: #fff; background: #333; border-radius: 6px; padding: 1px 5px; }
+@keyframes treme { from { transform: rotate(-2deg) } to { transform: rotate(2deg) } }
+#setas { position: fixed; left: 50%; width: 192px; margin-left: -96px; bottom: calc(var(--painelBase) + 16px); display: flex; justify-content: space-between;
+  z-index: 3; pointer-events: none; }
+
+/* pedais (modo padrão): freio à esquerda, acelerador à direita, baixos e finos, meio transparentes fora de uso */
+#acel { position: absolute; right: max(var(--m), env(safe-area-inset-right)); bottom: var(--painelBase); width: var(--pedalW); height: calc(30vh - 32px); height: calc(30dvh - 32px); }
+#freio { position: absolute; left: max(var(--m), env(safe-area-inset-left)); bottom: var(--painelBase); width: var(--pedalW); height: min(108px, 16dvh); }
+.pedal { opacity: .85; transition: opacity .12s; }
+.pedal.apertado { opacity: 1; }
+#freio { opacity: 1; }                   /* freio sempre opaco: vermelho translúcido sobre o céu parecia rosa */
+#freio .ico { font-size: 26px; }
+#freio b { font-size: 15px; letter-spacing: 1px; }
+#acelLim { display: none; }               /* o limite aparece 1× só, no velocímetro; no pedal fica a faixa dourada */
+#acelDica { font-size: 13px; }
+#acelPe { width: 46px; height: 46px; margin-left: -23px; }
+#acelRot { font-size: 11px; top: -11px; padding: 1px 7px; }
+
+/* ---------- modo volante (2 polegares): volante à esquerda · velocímetro + setas no centro · freio em cima do acelerador à direita ---------- */
+#thumb { position: fixed; left: max(var(--m), env(safe-area-inset-left)); bottom: var(--painelBase); width: var(--volW); height: var(--volW); pointer-events: none; z-index: 2; }
+#stick { position: absolute; inset: 0; }
+#wheel { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); will-change: transform; opacity: .9; }
+#thumb.active #wheel { opacity: 1; }
+.wheel svg { width: 100%; height: 100%; display: block; }
+#wheel svg .hz { transform-box: fill-box; transform-origin: center; }
+#wheel.honk svg .hz { animation: squish .38s ease-out; }
+@keyframes squish { 0% { transform: scale(1) } 25% { transform: scale(1.22, .78) } 55% { transform: scale(.92, 1.1) } 80% { transform: scale(1.04, .97) } 100% { transform: scale(1) } }
+body.modo-volante { --centroX: calc((var(--m) + var(--volW) + 100vw - var(--m) - var(--volPedW)) / 2); --acelH: calc(30dvh - 86px); }
+body.modo-volante #acel { width: var(--volPedW); height: calc(30vh - 86px); height: var(--acelH); }
+body.modo-volante #acelRot { display: none; }
+body.modo-volante #freio { right: max(var(--m), env(safe-area-inset-right)); left: auto; width: var(--volPedW); height: 58px;
+  bottom: calc(var(--painelBase) + 30vh - 86px + 4px); bottom: calc(var(--painelBase) + var(--acelH) + 4px); }
+body.modo-volante #freio .rot { gap: 0; }
+body.modo-volante #freio .ico { font-size: 22px; }
+body.modo-volante #freio b { font-size: 11px; letter-spacing: .5px; }
+body.modo-volante #freio .sola, body.modo-volante #acelTrilho { border-radius: 22px; }
+body.modo-volante #velBox { left: var(--centroX); bottom: calc(var(--painelBase) + 58px); }
+/* spec 018: botão do cinto, logo acima do velocímetro; pisca até pôr; depois fica verde e some */
+#cintoBtn { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--painelBase) + 74px); z-index: 3;
+  pointer-events: auto; font-family: inherit; font-weight: 900; font-size: 15px; line-height: 1; color: #fff; background: linear-gradient(#ff8a3d, #f05a00);
+  border: 3px solid #fff; border-radius: 18px; padding: 8px 14px; box-shadow: 0 3px 0 #a33a00, 0 6px 12px rgba(0,0,0,.25);
+  text-shadow: none; cursor: pointer; animation: cintoPulsa .7s ease-in-out infinite alternate; white-space: nowrap; }
+#cintoBtn.chama { animation: cintoChama .5s ease-in-out 2; }
+@keyframes cintoChama { 0%,100% { transform: translateX(-50%) rotate(0) } 25% { transform: translateX(-50%) rotate(-8deg) scale(1.15) } 75% { transform: translateX(-50%) rotate(8deg) scale(1.15) } }
+#cintoBtn.ok { background: linear-gradient(#5fd17a, #1f9d55); box-shadow: 0 3px 0 #11672c, 0 6px 12px rgba(0,0,0,.25); animation: none; }
+@keyframes cintoPulsa { from { transform: translateX(-50%) scale(1) } to { transform: translateX(-50%) scale(1.08) } }
+body.modo-volante #cintoBtn { left: var(--centroX); bottom: calc(var(--painelBase) + 120px); }
+body.modo-volante #setas { left: var(--centroX); width: 100px; margin-left: -50px; bottom: var(--painelBase); }
+
+/* spec 021/022: missões no menu, medalha e botões do relatório */
+.missoes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 2px auto 6px; width: min(320px, 100%); }
+.missoes > span { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 4px; border-radius: 14px; font-weight: 800; font-size: 12.5px; line-height: 1.15;
+  background: var(--t-fff0f7); border: 2px solid var(--t-ffc1de); color: var(--t-8a4a6a); cursor: pointer; text-align: center; }
+.missoes > span b { font-size: 22px; }
+.missoes > span i { position: absolute; top: -6px; right: -4px; font-style: normal; font-size: 20px; }
+.missoes > span.on { background: linear-gradient(var(--t-ff6fb5), var(--t-ff2d8f)); color: #fff; border-color: #fff; box-shadow: 0 3px 0 var(--t-b3125f); }
+.menuCnh { font-size: 13px; font-weight: 800; color: var(--t-8a4a6a); margin: 0 0 8px; }
+.relMedalha { margin-left: auto; font-size: 40px; line-height: 1; display: flex; flex-direction: column; align-items: center; }
+.relMedalha small { font-size: 11px; font-weight: 900; color: #1f7a35; }
+.relBotoes { display: flex; gap: 8px; justify-content: center; }
+.relBotoes button.sec { background: #fff; color: var(--t-c2185b); box-shadow: 0 4px 0 var(--t-ffc1de); border: 2px solid var(--t-ffc1de); }
+.relBotoes button { font-size: 18px; padding: 10px 14px; white-space: nowrap; }
+#menu .sub { font-size: 13px; line-height: 1.35; margin: 4px 0 8px; }
+/* spec 021: relatório mais compacto (ganhou medalha e 2 botões; com 4 multas tem de caber em pé sem rolar) */
+.relTopo h2 { font-size: 21px; line-height: 1.1; }
+.relTopo .bigIcon { font-size: 40px; }
+.relEstrelas { font-size: 34px; margin: 2px 0 2px; }
+#relLista { gap: 4px; }
+#relLista li { padding: 4px 10px; font-size: 14px; }
+.relTotal { margin-top: 6px; padding: 5px; font-size: 19px; }
+.relTotal b { font-size: 22px; }
+.relCnh { margin: 5px 0 8px; font-size: 14px; line-height: 1.35; }
+.relBotoes button { font-size: 17px; padding: 9px 14px; }
+
+/* spec 031: missão escolhida no menu + tela de missões com cartões */
+.missaoAtual { display: flex; align-items: center; gap: 10px; margin: 4px auto 6px; width: min(320px, 100%); padding: 8px 12px;
+  border-radius: 16px; background: linear-gradient(var(--t-ff6fb5), var(--t-ff2d8f)); color: #fff; cursor: pointer; text-align: left;
+  box-shadow: 0 4px 0 var(--t-b3125f); }
+.missaoAtual .ico { font-size: 32px; }
+.missaoAtual b { display: block; font-size: 16px; line-height: 1.15; }
+.missaoAtual small { font-size: 12px; opacity: .95; }
+.missaoAtual .troca { margin-left: auto; font-weight: 900; font-size: 13px; background: #fff; color: var(--t-c2185b); border-radius: 12px; padding: 4px 8px; white-space: nowrap; }
+#telaMissoes { z-index: 20; }
+.card.telaM { max-height: 100%; overflow-y: auto; padding: 14px 14px 16px; }
+.card.telaM h2 { margin: 0; color: var(--t-ff2d8f); }
+.card.telaM .sub { margin: 2px 0 8px; font-size: 13px; }
+#missaoCtl.missoes { display: flex; flex-direction: column; gap: 7px; width: 100%; margin: 0 0 10px; }
+#missaoCtl.missoes > span { position: relative; display: grid; grid-template-columns: 44px 1fr auto; grid-template-rows: auto auto; align-items: center;
+  column-gap: 8px; text-align: left; padding: 8px 10px; font-size: 14px; border-radius: 14px; }
+#missaoCtl.missoes > span b { grid-row: 1 / 3; font-size: 32px; text-align: center; }
+#missaoCtl.missoes > span strong { font-size: 15px; line-height: 1.15; }
+#missaoCtl.missoes > span em { grid-column: 2; font-style: normal; font-weight: 700; font-size: 12px; opacity: .85; }
+#missaoCtl.missoes > span i { position: static; grid-column: 3; grid-row: 1 / 3; font-size: 26px; text-align: center; min-width: 30px; }
+#missaoCtl.missoes .dif { font-size: 11px; letter-spacing: -1px; }
+#fechaMissoes { font-size: 18px; padding: 9px 20px; background: #fff; color: var(--t-c2185b); box-shadow: 0 4px 0 var(--t-ffc1de); border: 2px solid var(--t-ffc1de); }
+#missaoCtl.missoes .dif u { text-decoration: none; opacity: .25; }
+#tempoCtl { display: flex; width: max-content; margin: 0 auto 8px; }
+/* ---------- spec 041 (do site): Toque/Teclado e Volante/Pedais no menu; painel de teclas no modo Teclado ---------- */
+#aparelhoCtl, #modoCtl, #mapaCtl { display: flex; width: max-content; margin: 0 auto 8px; }
+/* spec 045: até o jogo terminar de carregar, os botões do menu ficam apagados (antes pareciam travados) */
+body.carregando #menu .modo, body.carregando #playBtn { opacity: .45; pointer-events: none; }
+#mapaCtl span { font-size: 15px; padding: 6px 11px; }
+#missaoCtl span.chapeco { border-style: dashed; }
+#aparelhoCtl span, #modoCtl span { font-size: 15px; padding: 6px 11px; }
+#pcPainel { display: none; }
+body.aparelho-pc #acel, body.aparelho-pc #freio, body.aparelho-pc #thumb, body.aparelho-pc #setas { display: none !important; }
+body.aparelho-pc #pcPainel { display: flex; flex-direction: column; gap: 7px; position: absolute; left: 14px; bottom: 14px; padding: 10px 12px;
+  background: rgba(255,255,255,.9); border-radius: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.22); border: 3px solid var(--t-ff4fa3);
+  color: var(--t-5a2a4a); font-weight: 800; font-size: 14px; text-shadow: none; pointer-events: none; z-index: 5; }
+.pcLinha { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.pcLinha span { margin-right: 6px; }
+.pcLinha .soVolante { display: inline-flex; align-items: center; gap: 5px; }
+body.modo-pedais .pcLinha .soVolante, #hintPc .soVolante.off { display: none; }
+kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 8px;
+  font: 900 15px/1 system-ui, sans-serif; color: #333; background: linear-gradient(#fff, #e9e9ef); border: 2px solid #c9c9d4; box-shadow: 0 3px 0 #a9a9b6;
+  transition: transform .05s, background .05s; }
+kbd.largo { min-width: 58px; font-size: 12px; }
+kbd.on { transform: translateY(3px); box-shadow: 0 0 0 #a9a9b6; background: linear-gradient(#ffe36b, #ffc81e); border-color: #e0a800; }
+body.aparelho-pc #velBox { left: 50%; margin-left: -60px; }
+#tempoCtl span { font-size: 15px; padding: 6px 11px; }
+#tempoCtl.travado span:not(.on) { opacity: .35; }                     /* spec 053: missão da chuva */
+
+/* =====================================================================================================================
+   spec 041 (vinda da versão do site, spec 015 de lá) — Centro de Chapecó (centro.html): velocidade em cima do carro,
+   nome da rua no topo, botão de sair, crédito do OpenStreetMap
+   ===================================================================================================================== */
+body.centro #velBox { display: none !important; }
+#velCarro { position: fixed; left: 0; top: 0; z-index: 1; pointer-events: none; display: flex; align-items: baseline; gap: 2px; will-change: transform;
+  color: #3dff6e; font-weight: 900; line-height: 1; text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 6px rgba(0,0,0,.6); }
+#velCarroN { font-size: 22px; }
+#velCarroLim { align-self: center; margin-left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 3px solid #e8262f;
+  display: flex; align-items: center; justify-content: center; color: #111; font-size: 11px; font-weight: 900; text-shadow: none; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+#velCarro small { font-size: 11px; font-weight: 800; }
+#velCarro.acima { color: #ff4040; }
+#velCarro.acima #velCarroN { display: inline-block; animation: tremeVel .3s ease-in-out infinite alternate; }
+@keyframes tremeVel { from { transform: rotate(-4deg) scale(1.05) } to { transform: rotate(4deg) scale(1.15) } }
+#ruaAtual { background: rgba(255,255,255,.92); color: var(--t-8a4a6a); text-shadow: none; font-weight: 900; font-size: 15px; line-height: 1; padding: 6px 10px;
+  border-radius: 13px; box-shadow: 0 2px 5px rgba(0,0,0,.18); white-space: nowrap; max-width: calc(100vw - 80px); overflow: hidden; text-overflow: ellipsis; }
+#sair { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 6px); right: 8px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.92);
+  color: var(--t-5a2a4a); text-shadow: none; font: 900 18px/34px system-ui, sans-serif; text-align: center; text-decoration: none; pointer-events: auto;
+  box-shadow: 0 2px 5px rgba(0,0,0,.18); }
+#credito { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 42px); transform: translateX(-50%); z-index: 1; pointer-events: none; font: 600 10px/1.2 Roboto, Arial, sans-serif;
+  color: rgba(0,0,0,.6); background: rgba(255,255,255,.55); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+.hint.credito { font-size: 12px; opacity: .8; }
+.hint a { color: inherit; font-weight: 800; }

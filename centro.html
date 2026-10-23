@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ff4fa3">
+<meta name="robots" content="noindex">
+<title>Trânsito Fofo — Chapecó</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="modo-volante centro">
+<canvas id="game"></canvas>
+
+<!-- spec 041 (vinda da versão do site, spec 015 de lá): passeio livre no Centro de Chapecó (ruas e prédios do
+     OpenStreetMap); spec 044: com a sinalização de verdade e as regras do jogo -->
+<div id="velCarro" class="hidden"><b id="velCarroN">0</b><small>km/h</small><span id="velCarroLim" title="limite da via">40</span></div>
+<div id="hud" class="hidden">
+  <!-- spec 044: as regras do jogo valem no Centro (placar, avisos de multa e dicas iguais aos do bairro) -->
+  <div id="topo">
+    <div id="placar"><span>⭐ <b id="estrelas">0</b></span><span>🪪 <b id="pontosCnh">0</b></span><span>💰 <b id="dinheiro">1.000,00</b></span></div>
+    <div id="ruaAtual">📍 <b id="ruaNome">—</b></div>
+  </div>
+  <div id="barra" class="hidden"><div id="gps" class="hidden"><span id="gpsTxt"></span> <span id="gpsSub"></span></div><div id="proximo" class="hidden"></div></div>
+  <div id="seta" class="hidden"></div><b id="rumoTxt" class="hidden"></b>
+  <div id="ladoEsq" class="lado hidden"></div><div id="ladoDir" class="lado hidden"></div>
+  <div id="aviso" class="hidden"><div id="avisoTitulo"></div><div id="avisoLinha"></div><div id="avisoExplica"></div></div>
+  <div id="msg" class="hidden"></div>
+  <div id="dica" class="hidden"><div id="dicaTxt"></div><div id="dicaSub"></div></div>
+  <a id="sair" class="ui" href="index.html" aria-label="voltar ao bairro">✕</a>
+</div>
+<div id="credito">© colaboradores do OpenStreetMap</div>
+<!-- spec 051: a "foto do radar" (aparece quando o radar pega o carro acima do limite) -->
+<div id="fotoRadar" class="hidden"><div class="fotoTopo">📸 FISCALIZAÇÃO ELETRÔNICA</div><img id="fotoImg" alt="foto do radar"><div id="fotoTxt"></div></div>
+<div id="flash" class="hidden"></div>
+<div id="voo"></div>
+<!-- spec 046: pisca (as setas do bairro) e ré (R) também no Centro -->
+<div id="setas" class="hidden">
+  <button id="setaEsq" class="setaBtn ui" data-lado="esq" aria-label="seta para a esquerda"><svg viewBox="0 0 40 40"><path d="M5 20 L19 7 V14 H35 V26 H19 V33 Z" fill="#fff" stroke="#b35d00" stroke-width="2.2" stroke-linejoin="round"/></svg></button>
+  <button id="reBtn" class="setaBtn reBtn ui" aria-label="engatar a ré">R</button>
+  <button id="setaDir" class="setaBtn ui" data-lado="dir" aria-label="seta para a direita"><svg viewBox="0 0 40 40"><path d="M35 20 L21 7 V14 H5 V26 H21 V33 Z" fill="#fff" stroke="#b35d00" stroke-width="2.2" stroke-linejoin="round"/></svg></button>
+</div>
+
+<div id="thumb" class="hidden">
+  <div id="stick"><div class="wheel" id="wheel"></div></div>
+</div>
+
+<div id="pcPainel" class="hidden">
+  <div class="pcLinha"><kbd data-k="ArrowUp">↑</kbd><span>acelera</span><kbd data-k="ArrowDown">↓</kbd><kbd data-k="Space" class="largo">espaço</kbd><span>freia</span></div>
+  <div class="pcLinha"><kbd data-k="ArrowLeft">←</kbd><kbd data-k="ArrowRight">→</kbd><span>vira</span><kbd data-k="KeyA">A</kbd><kbd data-k="KeyD">D</kbd><span>pisca</span></div>
+  <div class="pcLinha"><kbd data-k="KeyH">H</kbd><span>buzina</span><kbd data-k="KeyR">R</kbd><span>ré</span></div>
+</div>
+
+<div id="pedais" class="hidden">
+  <div id="freio" class="pedal">
+    <div class="sola"><div class="nerv"></div><div class="rot"><span class="ico">✋</span><b>FREIO</b></div></div>
+  </div>
+  <div id="acel" class="pedal">
+    <div id="acelTrilho" class="sola">
+      <div class="nerv"></div>
+      <div id="acelFill"></div>
+      <div id="acelFaixa"><span id="acelLim">40</span></div>
+      <div id="acelVel"></div>
+      <div id="acelPe"><svg viewBox="-20 -20 40 40"><path d="M 0 -4 C 0 -14 -16 -16 -16 -4 C -16 6 -4 12 0 18 C 4 12 16 6 16 -4 C 16 -16 0 -14 0 -4 Z" transform="translate(0 -2)" fill="#fff" stroke="#1fae4b" stroke-width="2.4" stroke-linejoin="round"/></svg></div>
+      <div id="acelDica">👆<br>arrasta</div>
+    </div>
+    <div id="acelRot">ACELERA</div>
+  </div>
+  <div id="acelCurva" class="hidden"></div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <div class="bigIcon" id="bigIcon">🏙️💗</div>
+    <h1>Chapecó</h1>
+    <p class="missao">🚗 <b>Passeio livre</b> pelas ruas de verdade</p>
+    <p class="sub">Centro e bairros vizinhos (3 × 3 km): Getúlio Vargas, Catedral, Prefeitura…<br>Semáforos, PAREs e radares de verdade: as regras valem! 🚦</p>
+    <button id="playBtn">🚗 Dirigir</button>
+    <p class="hint" id="hintToque">🎡 Polegar esquerdo no volante · 🦶 direito no pedal<br>Desliza pra cima = ✋ freio · ⬅️ ➡️ pisca · R ré</p>
+    <p class="hint hidden" id="hintPc">⌨️ ↑ acelera · ← → vira · ↓ ou espaço freia · A/D pisca · R ré · H buzina</p>
+    <p class="hint"><a href="index.html">← Voltar ao bairro do jogo</a></p>
+    <p class="hint credito">Mapa: © colaboradores do OpenStreetMap (ODbL)</p>
+  </div>
+</div>
+
+<div id="fps" class="hidden"></div>
+<script type="module" src="src/centro/centro.js"></script>
+</body>
+</html>
