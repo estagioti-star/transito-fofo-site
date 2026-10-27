@@ -424,7 +424,7 @@ function readThumb(e) {
       thumb.tap = null;
     }
     const gr = thumb.grab;
-    const angSlide = (t.clientX - gr.x) / 110 * 90;               // spec 060: era /70 (sensível demais)
+    const angSlide = (t.clientX - gr.x) / 85 * 90;                // spec 064: 85 px = 90° (110 não cabia até a borda; o original era 70)
     let ang = angSlide;
     if (gr.a0 !== null) {
       let d = Math.atan2(t.clientX - thumb.cx, thumb.cy - t.clientY) * 180 / Math.PI - gr.a0;
@@ -457,9 +457,10 @@ function onTouch(e) {
   e.preventDefault();
   isTouchUI = true;
   // spec 060: dedo na parte de cima da tela (longe do volante e dos pedais) = olhar para os lados
-  if (estado === 'dirigindo' && olharLivre.toque(e, (x, y) => y < innerHeight * 0.55 && !zonaVolante(x, y))) return;
-  if (CONTROLE === 'volante') readThumb(e);       // o volante pega só os toques da esquerda; o resto é do pedal
-  pedais.toque(e);
+  const resto = estado === 'dirigindo' ? olharLivre.toque(e, (x, y) => y < innerHeight * 0.55 && !zonaVolante(x, y)) : e;
+  if (!resto.changedTouches.length) return;
+  if (CONTROLE === 'volante') readThumb(resto);   // o volante pega só os toques da esquerda; o resto é do pedal
+  pedais.toque(resto);
 }
 const olharLivre = criarOlharLivre();
 for (const ev of ['mousedown', 'mousemove', 'mouseup']) addEventListener(ev, e => {

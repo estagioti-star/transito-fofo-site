@@ -16,16 +16,16 @@ export function criarOlharLivre() {
       return true;
     },
     solta(id) { if (id === st.id) st.id = null; },
-    // toques: começa na zona livre (livre(x, y) = true); devolve true se o toque é do olhar
+    // toques: começa na zona livre (livre(x, y) = true). Devolve o evento SÓ com os outros dedos (volante, pedal) —
+    // spec 064: antes devolvia "é meu" e o evento inteiro era descartado, e o dedo do volante "soltava" no meio da curva
     toque(e, livre) {
-      let meu = false;
+      const outros = [];
       for (const t of e.changedTouches) {
-        if (e.type === 'touchstart' && st.id === null && livre(t.clientX, t.clientY)) { this.pega(t.identifier, t.clientX); meu = true; continue; }
-        if (t.identifier !== st.id) continue;
-        meu = true;
+        if (e.type === 'touchstart' && st.id === null && livre(t.clientX, t.clientY)) { this.pega(t.identifier, t.clientX); continue; }
+        if (t.identifier !== st.id) { outros.push(t); continue; }
         if (e.type === 'touchend' || e.type === 'touchcancel') this.solta(t.identifier); else this.move(t.identifier, t.clientX);
       }
-      return meu;
+      return { type: e.type, changedTouches: outros, touches: e.touches, target: e.target, preventDefault() {} };
     },
     passo(dt) {
       if (st.id === null) st.alvo *= Math.exp(-dt * 2.2);                     // soltou: volta devagar

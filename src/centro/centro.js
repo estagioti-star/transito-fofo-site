@@ -132,8 +132,9 @@ for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) addEven
   if (estado !== 'dirigindo' || (e.target.closest && e.target.closest('button, .ui, a'))) return;
   e.preventDefault();
   // spec 060: dedo na parte de cima da tela (longe do volante e dos pedais) = olhar para os lados
-  if (olharLivre.toque(e, (x, y) => y < innerHeight * 0.55 && !volante.zona(x, y))) return;
-  volante.toque(e); pedais.toque(e);
+  const resto = olharLivre.toque(e, (x, y) => y < innerHeight * 0.55 && !volante.zona(x, y));   // spec 064: só os outros dedos
+  if (!resto.changedTouches.length) return;
+  volante.toque(resto); pedais.toque(resto);
 }, { passive: false });
 const olharLivre = criarOlharLivre();
 for (const ev of ['mousedown', 'mousemove', 'mouseup']) addEventListener(ev, e => {

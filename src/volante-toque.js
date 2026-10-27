@@ -29,7 +29,7 @@ export function criarVolanteToque(thumbEl, wheelEl, buzinar) {
         if (st.tap.move < TAP_MOVE) continue;
         st.tap = null;
       }
-      const gr = st.grab, angSlide = (t.clientX - gr.x) / 110 * 90;   // spec 060: era /70 (sensível demais)
+      const gr = st.grab, angSlide = (t.clientX - gr.x) / 85 * 90;    // spec 064: 85 px = 90° (110 não cabia até a borda)
       let ang = angSlide;
       if (gr.a0 !== null) {
         let d = Math.atan2(t.clientX - st.cx, st.cy - t.clientY) * 180 / Math.PI - gr.a0;
