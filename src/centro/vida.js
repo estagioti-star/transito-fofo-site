@@ -232,7 +232,9 @@ export function criarVida(dados, rede, S, { maxParados = 700, nMoveis = 45, pert
         if (a !== null) porCruz = Math.min(porCruz, a - 4);
         const v = ve(m, o);
         if (v === null) continue;
-        if (v.lado && (vai || (ve(o, m)?.lado && m.k < o.k))) continue;   // os dois se veem de lado: o de índice menor passa
+        // os dois se veem de lado: o de índice menor passa. spec 061: carro PARADO no caminho (fila parada no meio do
+        // cruzamento) sempre segura — nem o "passa devagar" do desempate atravessa ele
+        if (v.lado && o.v > 0.3 && (vai || (ve(o, m)?.lado && m.k < o.k))) continue;
         if (v.lado) porCruz = Math.min(porCruz, v.d - 3.5); else pare = Math.min(pare, v.d - 6);
       }
       if (porCruz < Infinity && porCruz < pare) {
@@ -244,6 +246,8 @@ export function criarVida(dados, rede, S, { maxParados = 700, nMoveis = 45, pert
       if (pare < Infinity) alvo = Math.min(alvo, Math.sqrt(2 * 3 * Math.max(0, pare)));
       m.v += Math.max(-6 * dt, Math.min(2.5 * dt, alvo - m.v));
       m.s += Math.max(0, m.v) * dt;
+      // spec 061: na mesma rua, nunca entra no carro da frente (fica ≥ 4,5 m atrás; freada brusca na fila)
+      for (const o of moveis) if (o !== m && o.tr === m.tr && (o.s > m.s || (o.s === m.s && o.k < m.k)) && o.s - m.s < 4.5) { if (o.s - 4.5 < m.s) { m.s = Math.max(0, Math.min(m.s, Math.max(m.s - m.v * dt, o.s - 4.5))); m.v = Math.min(m.v, o.v); } }
       if (m.s >= m.tr.L - 0.3) {                   // fim do trilho: segue pelo próximo (ou reaparece longe)
         const nx = proximo(m.tr, jog);
         if (nx) { m.s -= m.tr.L; m.tr = nx; m.feitos = new Set(); }

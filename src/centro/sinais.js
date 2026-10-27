@@ -70,6 +70,20 @@ export function criarSinais(dados, rede) {
     // cruzamentos vizinhos não abrem todos juntos: desloca a fase 7 s por cruzamento
     semaforos.push({ id: 'sc' + i, no: 'cz_' + ck, ciclo: { eixo, off: (gr.n * 7) % CICLO.total }, linhas: [l], cx: gr.x, cz: gr.z });
   });
+  // spec 061: 2 postes do OSM na MESMA entrada do mesmo cruzamento (mesmo sentido, mesma faixa, < 20 m um do outro)
+  // viravam 2 linhas — passar 1 vermelho dava 2 multas. Fica só a linha mais perto do meio do cruzamento.
+  for (let i = semaforos.length - 1; i >= 0; i--) {
+    const a = semaforos[i], la = a.linhas[0];
+    const dup = semaforos.some((b, j) => {
+      if (j === i || b.no !== a.no) return false;
+      const lb = b.linhas[0];
+      if (Math.cos(la.heading - lb.heading) < 0.9) return false;
+      const fx = Math.sin(la.heading), fz = Math.cos(la.heading), dx = lb.x - la.x, dz = lb.z - la.z;
+      const ao = dx * fx + dz * fz, lado = Math.abs(-dx * fz + dz * fx);
+      return lado < 3 && ao > 0 && ao < 20;                 // b está à frente de a, na mesma faixa: a sobra
+    });
+    if (dup) semaforos.splice(i, 1);
+  }
   const SEM = new Map(semaforos.map(s => [s.id, s]));
   // spec 047b: o cruzamento inteiro com semáforo (para os carros IA que chegam por uma entrada sem poste no OSM)
   // (um por NÓ do cruzamento, todos com o tempo do grupo)

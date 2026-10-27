@@ -339,7 +339,11 @@ body.modo-volante #velBox { left: var(--centroX); bottom: calc(var(--painelBase)
 #cintoBtn.ok { background: linear-gradient(#5fd17a, #1f9d55); box-shadow: 0 3px 0 #11672c, 0 6px 12px rgba(0,0,0,.25); animation: none; }
 @keyframes cintoPulsa { from { transform: translateX(-50%) scale(1) } to { transform: translateX(-50%) scale(1.08) } }
 body.modo-volante #cintoBtn { left: var(--centroX); bottom: calc(var(--painelBase) + 120px); }
-body.modo-volante #setas { left: var(--centroX); width: 100px; margin-left: -50px; bottom: var(--painelBase); }
+body.modo-volante #setas { left: var(--centroX); width: 144px; margin-left: -72px; bottom: var(--painelBase); }   /* spec 060: 3 botões (← R →) de 46 px */
+@media (max-width: 379px) {   /* spec 060: tela estreita (360 px): 3 botões de 44 px (o mínimo do polegar) cabem entre volante e pedal */
+  body.modo-volante #setas { width: 134px; margin-left: -67px; }
+  body.modo-volante #setas .setaBtn { width: 44px; height: 44px; }
+}
 
 /* spec 021/022: missões no menu, medalha e botões do relatório */
 .missoes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 2px auto 6px; width: min(320px, 100%); }
