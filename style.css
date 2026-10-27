@@ -434,6 +434,9 @@ body.centro #velBox { display: none !important; }
 @keyframes tremeVel { from { transform: rotate(-4deg) scale(1.05) } to { transform: rotate(4deg) scale(1.15) } }
 #ruaAtual { background: rgba(255,255,255,.92); color: var(--t-8a4a6a); text-shadow: none; font-weight: 900; font-size: 15px; line-height: 1; padding: 6px 10px;
   border-radius: 13px; box-shadow: 0 2px 5px rgba(0,0,0,.18); white-space: nowrap; max-width: calc(100vw - 80px); overflow: hidden; text-overflow: ellipsis; }
+/* spec 063b: no Centro o nome da rua encolhe (reticências) antes de chegar no ✕ */
+body.centro #topo { padding-right: 44px; box-sizing: border-box; }
+body.centro #ruaAtual { flex: 0 1 auto; min-width: 0; }
 #sair { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 6px); right: 8px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.92);
   color: var(--t-5a2a4a); text-shadow: none; font: 900 18px/34px system-ui, sans-serif; text-align: center; text-decoration: none; pointer-events: auto;
   box-shadow: 0 2px 5px rgba(0,0,0,.18); }
