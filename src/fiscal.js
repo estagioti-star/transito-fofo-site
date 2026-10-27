@@ -141,6 +141,7 @@ export function criarFiscal({ bairro = BAIRRO, lei = LEI, saldoInicial = 1000, f
   }));
   const ROT = bairro.rotula;
   const rot = { dentro: false };
+  let rotContraT = 0;                 // spec 062: tempo girando ao contrário no anel
 
   let estrelas = estrelasIniciais, pontosCnh = 0, dinheiro = saldoInicial, ultimoAviso = -Infinity;
   const infracoes = [], acertos = [], batidas = [];
@@ -167,6 +168,7 @@ export function criarFiscal({ bairro = BAIRRO, lei = LEI, saldoInicial = 1000, f
   const naPonteF = (x, z, folga) => pontes.find(p => x > p.x0 - folga && x < p.x1 + folga && z > p.z0 - 1 && z < p.z1 + 1);
   let saiuGaragem = false;
   let contraT = 0, contraAviso = -Infinity, paradoVaga = 0, vagaJulgada = null, estacionou = null;
+  let estacionouT = -Infinity;        // spec 063: quando deu a última ⭐ de estacionar
   const estacionouErrado = [];                             // spec 042: estacionar na rua (art. 181)
   let paradoRua = 0, ruaJulgada = false, paradoDupla = 0, duplaJulgada = false;
   const parados = (bairro.predios || []).filter(p => p.tipo === 'carroParado').map(p => ({ x: (p.x0 + p.x1) / 2, z: (p.z0 + p.z1) / 2 }));
@@ -363,7 +365,24 @@ export function criarFiscal({ bairro = BAIRRO, lei = LEI, saldoInicial = 1000, f
           const arco = ((((Math.atan2(o.z - ROT.z, o.x - ROT.x) - te) % TAU) + TAU) % TAU) * ROT.R;
           return arco < ROTULA_ANTES;
         });
-        if (vem) infracao(out, 'rotula_preferencia', c, t, 'rotula'); else acerto(out, 'rotulaCerta', c, t, 'rotula');
+        // spec 062: o anel gira com θ DECRESCENDO (anti-horário visto de cima); tangente do giro = (sen θ, −cos θ).
+        // Entrou virando contra o giro (contramão na rótula) → sem ⭐ (o aviso de contramão vem abaixo)
+        const noSentido = Math.sin(c.heading) * Math.sin(te) - Math.cos(c.heading) * Math.cos(te) > -0.35 || v < 0;
+        if (vem) infracao(out, 'rotula_preferencia', c, t, 'rotula'); else if (noSentido) acerto(out, 'rotulaCerta', c, t, 'rotula');
+      }
+      // spec 062: girando no anel ao contrário (θ crescendo) por 1 s → aviso de contramão (art. 186 II), como nas ruas
+      // de mão única (a rótula é de sentido único: placa de sentido de circulação)
+      if (ROT) {
+        const rx = c.x - ROT.x, rz = c.z - ROT.z, d = Math.hypot(rx, rz);
+        const omega = (rx * Math.cos(c.heading) - rz * Math.sin(c.heading)) * v / Math.max(1, d * d);   // dθ/dt
+        const contraRot = d > ROT.ilha - 1 && d < ROT.externo && Math.abs(v) > PARADO * 3 && omega > 0.05;
+        rotContraT = contraRot ? rotContraT + dt : 0;
+        if (rotContraT >= CONTRA_T && t - contraAviso >= CONTRA_REPETE) {
+          contraAviso = t;
+          const info = lei.CONTRAMAO, pontos = lei.PONTOS_JOGO.contramaoUnica;
+          const e = { tipo: 'aviso', motivo: 'contramao_unica', rua: 'rotula', pontos, dica: info.dica, artigo: info.multaReal.artigo, x: c.x, z: c.z, t };
+          estrelas += pontos; contramaos.push(e); out.push(e);
+        }
       }
 
       // ---- batida (caixa × caixa) com outro carro. Conta 1× por encostão (precisa separar 1 s para contar de novo)
@@ -525,8 +544,10 @@ export function criarFiscal({ bairro = BAIRRO, lei = LEI, saldoInicial = 1000, f
       // Vaga de idoso/PcD → aviso (art. 181 XX); vaga comum → acerto + evento "estacionou" (a missão do centro termina).
       {
         // o carro (1,7 × 3,4 m) tem de estar INTEIRO dentro da vaga (2,8 × 5 m), com folga de 15 cm, e alinhado (≤ 15°)
-        const vg = Math.abs(v) < 0.2 ? (bairro.vagas || []).find(g => !g.ocupada && Math.abs(Math.cos(c.heading - g.heading)) > 0.966
-          && Math.abs(c.x - (g.x0 + g.x1) / 2) <= (g.x1 - g.x0 - CARRO_L) / 2 + 0.15 && Math.abs(c.z - (g.z0 + g.z1) / 2) <= (g.z1 - g.z0 - CARRO_C) / 2 + 0.15) : null;
+        // spec 063: a vaga pode ser comprida em x (rua leste–oeste) ou em z — o carro deitado junto (antes só valia em z)
+        const dentroVaga = g => { const emX = g.x1 - g.x0 > g.z1 - g.z0, lx = emX ? CARRO_C : CARRO_L, lz = emX ? CARRO_L : CARRO_C;
+          return Math.abs(c.x - (g.x0 + g.x1) / 2) <= (g.x1 - g.x0 - lx) / 2 + 0.15 && Math.abs(c.z - (g.z0 + g.z1) / 2) <= (g.z1 - g.z0 - lz) / 2 + 0.15; };
+        const vg = Math.abs(v) < 0.2 ? (bairro.vagas || []).find(g => !g.ocupada && Math.abs(Math.cos(c.heading - g.heading)) > 0.966 && dentroVaga(g)) : null;
         paradoVaga = vg ? paradoVaga + dt : 0;
         if (!vg) vagaJulgada = null;
         if (vg && paradoVaga >= VAGA_T && vagaJulgada !== vg.id) {
@@ -537,18 +558,18 @@ export function criarFiscal({ bairro = BAIRRO, lei = LEI, saldoInicial = 1000, f
             if (Math.cos(c.heading - vg.heading) < 0) avisoRua(out, c, t, 'contramao');
             else if (folga > 1) avisoRua(out, c, t, 'muitoAfastado');
             else if (folga > lei.ESTACIONAR_RUA.meioFio) avisoRua(out, c, t, 'afastado');
-            else if (!estacionou) {
+            else if (estacionou !== vg.id) {   // spec 063: avisa a cada vaga nova (a missão termina na vaga perto do destino)
+              if (t - estacionouT >= 30) { acerto(out, 'balizaCerta', c, t, vg.id); estacionouT = t; }   // ⭐ no máx. 1× a cada 30 s
               estacionou = vg.id;
-              acerto(out, 'balizaCerta', c, t, vg.id);
               out.push({ tipo: 'estacionou', vaga: vg.id, tipoVaga: 'lateral', folga: +folga.toFixed(2), x: c.x, z: c.z, t });
             }
           } else if (vg.tipo !== 'comum') {
             const info = lei.VAGA, pontos = lei.PONTOS_JOGO.vagaReservada;
             const e = { tipo: 'aviso', motivo: 'vaga_reservada', vaga: vg.id, tipoVaga: vg.tipo, pontos, dica: info.dica, artigo: info.multaReal.artigo, x: c.x, z: c.z, t };
             estrelas += pontos; vagasErradas.push(e); out.push(e);
-          } else if (!estacionou) {
+          } else if (estacionou !== vg.id) {
+            if (t - estacionouT >= 30) { acerto(out, 'estacionouCerto', c, t, vg.id); estacionouT = t; }
             estacionou = vg.id;
-            acerto(out, 'estacionouCerto', c, t, vg.id);
             out.push({ tipo: 'estacionou', vaga: vg.id, tipoVaga: vg.tipo, x: c.x, z: c.z, t });
           }
         }

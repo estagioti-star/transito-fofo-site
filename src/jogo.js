@@ -672,6 +672,8 @@ function trataEventos(evs, tf) {
       if (e.motivo === 'setaCerta') conversaoFeita(e.ref, tf);
     } else if (e.tipo === 'estacionou') {
       if (M.estacionar && (M.estacionar === 'lateral') === (e.tipoVaga === 'lateral')) estacionouAgora = true;   // spec 042: baliza só na rua
+      // spec 063: nas outras missões, estacionar numa vaga a até 60 m do destino termina a viagem
+      if (!M.estacionar && Math.hypot(e.x - M.destino.x, e.z - M.destino.z) <= 60) estacionouAgora = true;
     } else if (e.tipo === 'odometro') {
       deltaEventos += e.pontos;
       if (e.sequencia % 50 === 0) { sons.plimplim(); aviso(`⭐ ${e.sequencia} seguidas! Isso aí!`, 1.6); } else sons.plim(e.sequencia);
@@ -1012,7 +1014,14 @@ function update(dt) {
     }
     // spec 035: só "chegou" no FIM da rota — a rota pode passar perto do destino antes, pela outra faixa (futebol)
     const noFimDaRota = guia.s === undefined || guia.s > piloto.P.at(-1).s - 20;
-    if (!chegou && (estacionouAgora || (d < M.destino.raio && noFimDaRota && (!M.estacionar || (AUTO && M.estacionar !== 'lateral'))))) {
+    // spec 063: chegar não basta — a missão termina quando ESTACIONA numa vaga livre perto do destino (até 60 m).
+    // (o piloto automático e o modo pedais dos testes ainda terminam ao chegar)
+    const soChegar = AUTO || CONTROLE === 'pedais';
+    if (!M.estacionar && !soChegar && !chegou && d < M.destino.raio + 4 && noFimDaRota && !dicaEstac) {
+      dicaEstac = true;
+      aviso('🅿️ Chegou! Agora estacione numa vaga livre aqui perto: colado no meio-fio, de frente para o sentido da rua', 4);
+    }
+    if (!chegou && (estacionouAgora || (d < M.destino.raio && noFimDaRota && (M.estacionar ? AUTO && M.estacionar !== 'lateral' : soChegar)))) {
       estacionouAgora = false;
       chegou = true; tChegada = t; estado = 'chegou'; sons.chegada(); relT = 1.6; mostraCinto();
       aviso(M.chegou, 3);
